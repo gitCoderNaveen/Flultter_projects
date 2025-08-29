@@ -21,27 +21,25 @@ class _SignupPageState extends State<SignupPage> {
   final emailController = TextEditingController();
   final cityController = TextEditingController();
   final pincodeController = TextEditingController();
-  final addressController = TextEditingController();
 
   // Person
   final personNameController = TextEditingController();
-  final personPrefixController = TextEditingController();
+  String? personPrefix = "Mr."; // dropdown default
   final professionController = TextEditingController();
 
   // Business
   final businessNameController = TextEditingController();
-  final businessPrefixController = TextEditingController();
+  String? businessPrefix = "M/s."; // dropdown default
   final keywordsController = TextEditingController();
   final descriptionController = TextEditingController();
   final landlineController = TextEditingController();
   final landlineCodeController = TextEditingController();
 
-  // Live mobile check state
   Timer? _debounce;
   bool _isCheckingMobile = false;
   bool _mobileExists = false;
-  String? _mobileMsg; // message shown under field
-  String _lastCheckToken = ""; // race-protection
+  String? _mobileMsg;
+  String _lastCheckToken = "";
 
   @override
   void dispose() {
@@ -50,12 +48,9 @@ class _SignupPageState extends State<SignupPage> {
     emailController.dispose();
     cityController.dispose();
     pincodeController.dispose();
-    addressController.dispose();
     personNameController.dispose();
-    personPrefixController.dispose();
     professionController.dispose();
     businessNameController.dispose();
-    businessPrefixController.dispose();
     keywordsController.dispose();
     descriptionController.dispose();
     landlineController.dispose();
@@ -71,7 +66,6 @@ class _SignupPageState extends State<SignupPage> {
       _mobileExists = false;
     });
 
-    // Only check when looks like a valid Indian number
     final trimmed = value.trim();
     final isPatternOk = RegExp(r'^[6-9]\d{9}$').hasMatch(trimmed);
     if (!isPatternOk) return;
@@ -82,7 +76,7 @@ class _SignupPageState extends State<SignupPage> {
   }
 
   Future<void> _checkMobileExists(String mobile) async {
-    final checkToken = mobile; // race-protection token
+    final checkToken = mobile;
     setState(() {
       _isCheckingMobile = true;
       _lastCheckToken = checkToken;
@@ -93,10 +87,8 @@ class _SignupPageState extends State<SignupPage> {
           .from('profiles')
           .select('business_name, person_name')
           .eq('mobile_number', mobile)
-          .limit(1)
           .maybeSingle();
 
-      // If user typed more after this request started, ignore result
       if (!mounted || _lastCheckToken != checkToken) return;
 
       if (res != null) {
@@ -115,7 +107,6 @@ class _SignupPageState extends State<SignupPage> {
         });
       }
     } catch (e) {
-      // Likely RLS/permission or network error
       setState(() {
         _mobileExists = false;
         _mobileMsg = "Couldn’t verify mobile (check RLS/connection)";
@@ -131,16 +122,14 @@ class _SignupPageState extends State<SignupPage> {
   Future<void> _signup() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // One last quick check to prevent race condition signups
     final mobile = mobileController.text.trim();
     final isPatternOk = RegExp(r'^[6-9]\d{9}$').hasMatch(mobile);
     if (!isPatternOk) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("Enter a valid Indian mobile number")));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Enter a valid Indian mobile number")));
       return;
     }
 
-    // If we already know it's taken, block
     if (_mobileExists) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(_mobileMsg ?? "Mobile already registered")),
@@ -150,43 +139,25 @@ class _SignupPageState extends State<SignupPage> {
 
     setState(() => isLoading = true);
 
-    const password = "signpost";
-    final emailAlias = "$mobile@celfon5g.com";
-
     try {
-      // Auth signup
-      final authRes = await SupabaseService.client.auth.signUp(
-        email: emailAlias,
-        password: password,
-      );
-      final user = authRes.user;
-      if (user == null) throw Exception("User signup failed");
-
-      // Build profile payload
       final Map<String, dynamic> profile = {
-        // ⚠️ If your schema has `user_id` NOT NULL, use "user_id": user.id
-        // and DO NOT set "id": user.id unless your PK equals auth uid.
-        // Update according to your actual table definition.
         "user_type": signupType,
         "mobile_number": mobile,
         "email": emailController.text.trim(),
         "city": cityController.text.trim(),
         "pincode": pincodeController.text.trim(),
-        "address": addressController.text.trim(),
-        // if your table has user_id:
-        "id": user.id,
       };
 
       if (signupType == "person") {
         profile.addAll({
           "person_name": personNameController.text.trim(),
-          "person_prefix": personPrefixController.text.trim(),
+          "person_prefix": personPrefix,
           "profession": professionController.text.trim(),
         });
       } else {
         profile.addAll({
           "business_name": businessNameController.text.trim(),
-          "business_prefix": businessPrefixController.text.trim(),
+          "business_prefix": businessPrefix,
           "keywords": keywordsController.text
               .split(",")
               .map((e) => e.trim())
@@ -200,18 +171,11 @@ class _SignupPageState extends State<SignupPage> {
 
       await SupabaseService.client.from("profiles").insert(profile);
 
-      // Ensure session (auto-login) if signUp didn’t return session
-      if (authRes.session == null) {
-        final loginRes = await SupabaseService.client.auth.signInWithPassword(
-          email: emailAlias,
-          password: password,
-        );
-        if (loginRes.session == null) {
-          throw Exception("Auto-login failed");
-        }
-      }
-
       if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Signup successful ✅")),
+      );
+
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const HomePageShell()),
@@ -246,20 +210,52 @@ class _SignupPageState extends State<SignupPage> {
   // ========== Forms ==========
   Widget _buildPersonForm() => Column(
     children: [
-      TextFormField(controller: personNameController, decoration: const InputDecoration(labelText: "Person Name")),
-      TextFormField(controller: personPrefixController, decoration: const InputDecoration(labelText: "Prefix (Mr/Ms/etc)")),
-      TextFormField(controller: professionController, decoration: const InputDecoration(labelText: "Profession")),
+      TextFormField(
+          controller: personNameController,
+          decoration: const InputDecoration(labelText: "Person Name")),
+      DropdownButtonFormField<String>(
+        value: personPrefix,
+        items: const [
+          DropdownMenuItem(value: "Mr.", child: Text("Mr.")),
+          DropdownMenuItem(value: "Ms.", child: Text("Ms.")),
+          DropdownMenuItem(value: "Lions", child: Text("Lions")),
+          DropdownMenuItem(value: "Others", child: Text("Others")),
+        ],
+        onChanged: (val) => setState(() => personPrefix = val),
+        decoration: const InputDecoration(labelText: "Prefix"),
+      ),
+      TextFormField(
+          controller: professionController,
+          decoration: const InputDecoration(labelText: "Profession")),
     ],
   );
 
   Widget _buildBusinessForm() => Column(
     children: [
-      TextFormField(controller: businessNameController, decoration: const InputDecoration(labelText: "Business Name")),
-      TextFormField(controller: businessPrefixController, decoration: const InputDecoration(labelText: "Prefix")),
-      TextFormField(controller: keywordsController, decoration: const InputDecoration(labelText: "Products (comma separated)")),
-      TextFormField(controller: descriptionController, decoration: const InputDecoration(labelText: "Description")),
-      TextFormField(controller: landlineController, decoration: const InputDecoration(labelText: "Landline")),
-      TextFormField(controller: landlineCodeController, decoration: const InputDecoration(labelText: "Landline Code")),
+      TextFormField(
+          controller: businessNameController,
+          decoration: const InputDecoration(labelText: "Business Name")),
+      DropdownButtonFormField<String>(
+        value: businessPrefix,
+        items: const [
+          DropdownMenuItem(value: "M/s.", child: Text("M/s.")),
+        ],
+        onChanged: (val) => setState(() => businessPrefix = val),
+        decoration: const InputDecoration(labelText: "Prefix"),
+      ),
+      TextFormField(
+          controller: keywordsController,
+          decoration:
+          const InputDecoration(labelText: "Products (comma separated)")),
+      TextFormField(
+          controller: descriptionController,
+          decoration: const InputDecoration(labelText: "Description")),
+      TextFormField(
+          controller: landlineController,
+          decoration: const InputDecoration(labelText: "Landline")),
+      TextFormField(
+          controller: landlineCodeController,
+          decoration: const InputDecoration(labelText: "Landline Code")),
     ],
   );
 
@@ -277,18 +273,24 @@ class _SignupPageState extends State<SignupPage> {
             padding: const EdgeInsets.all(16),
             child: ToggleButtons(
               isSelected: [signupType == "person", signupType == "business"],
-              onPressed: (index) => setState(() => signupType = index == 0 ? "person" : "business"),
+              onPressed: (index) =>
+                  setState(() => signupType = index == 0 ? "person" : "business"),
               borderRadius: BorderRadius.circular(12),
               selectedColor: Colors.white,
               fillColor: Theme.of(context).primaryColor,
               children: const [
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(children: [Icon(Icons.person), SizedBox(width: 8), Text("Person")]),
+                  child: Row(
+                      children: [Icon(Icons.person), SizedBox(width: 8), Text("Person")]),
                 ),
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(children: [Icon(Icons.business), SizedBox(width: 8), Text("Business")]),
+                  child: Row(children: [
+                    Icon(Icons.business),
+                    SizedBox(width: 8),
+                    Text("Business")
+                  ]),
                 ),
               ],
             ),
@@ -305,7 +307,9 @@ class _SignupPageState extends State<SignupPage> {
                   transitionBuilder: (child, animation) => FadeTransition(
                     opacity: animation,
                     child: SlideTransition(
-                      position: Tween<Offset>(begin: const Offset(0.2, 0), end: Offset.zero).animate(animation),
+                      position: Tween<Offset>(
+                          begin: const Offset(0.2, 0), end: Offset.zero)
+                          .animate(animation),
                       child: child,
                     ),
                   ),
@@ -319,12 +323,17 @@ class _SignupPageState extends State<SignupPage> {
                           suffixIcon: _isCheckingMobile
                               ? const Padding(
                             padding: EdgeInsets.all(12),
-                            child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+                            child: SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2)),
                           )
                               : (mobileLooksValid && _mobileMsg != null)
                               ? (_mobileExists
                               ? const Icon(Icons.error, color: Colors.red)
-                              : const Icon(Icons.check_circle, color: Colors.green))
+                              : const Icon(Icons.check_circle,
+                              color: Colors.green))
                               : null,
                         ),
                         keyboardType: TextInputType.phone,
@@ -338,22 +347,24 @@ class _SignupPageState extends State<SignupPage> {
                             alignment: Alignment.centerLeft,
                             child: Text(
                               _mobileMsg!,
-                              style: TextStyle(color: _mobileExists ? Colors.red : Colors.green, fontSize: 12),
+                              style: TextStyle(
+                                  color:
+                                  _mobileExists ? Colors.red : Colors.green,
+                                  fontSize: 12),
                             ),
                           ),
                         ),
-
-                      TextFormField(controller: emailController, decoration: const InputDecoration(labelText: "Email")),
-                      TextFormField(controller: cityController, decoration: const InputDecoration(labelText: "City")),
+                      TextFormField(
+                          controller: emailController,
+                          decoration: const InputDecoration(labelText: "Email")),
+                      TextFormField(
+                          controller: cityController,
+                          decoration: const InputDecoration(labelText: "City")),
                       TextFormField(
                         controller: pincodeController,
-                        decoration: const InputDecoration(labelText: "Pincode"),
+                        decoration:
+                        const InputDecoration(labelText: "Pincode"),
                         validator: validatePincode,
-                      ),
-                      TextFormField(
-                        controller: addressController,
-                        decoration: const InputDecoration(labelText: "Address"),
-                        maxLines: 2,
                       ),
 
                       const SizedBox(height: 10),
@@ -375,7 +386,8 @@ class _SignupPageState extends State<SignupPage> {
                 ? const Center(child: CircularProgressIndicator())
                 : ElevatedButton.icon(
               onPressed: _signup,
-              style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+              style: ElevatedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(50)),
               icon: const Icon(Icons.check_circle),
               label: Text("Sign Up as ${signupType.capitalize()}"),
             ),
@@ -387,5 +399,6 @@ class _SignupPageState extends State<SignupPage> {
 }
 
 extension StringCasingExtension on String {
-  String capitalize() => isEmpty ? this : "${this[0].toUpperCase()}${substring(1)}";
+  String capitalize() =>
+      isEmpty ? this : "${this[0].toUpperCase()}${substring(1)}";
 }

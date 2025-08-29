@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import '../supabase/supabase.dart';
+import 'package:supabase/supabase.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../supabase/supabase.dart'; // Your Supabase client
 
 class NearbyPromotionPage extends StatefulWidget {
   const NearbyPromotionPage({super.key});
@@ -9,300 +11,230 @@ class NearbyPromotionPage extends StatefulWidget {
 }
 
 class _NearbyPromotionPageState extends State<NearbyPromotionPage> {
-  // Guidance information dropdown
-  final List<String> infoOptions = [
-    'Select Information',
-    'Promotional Guidance 1',
-    'Promotional Guidance 2'
-  ];
-  String? selectedInfo;
+  final TextEditingController _pincodeController = TextEditingController();
+  final TextEditingController _customMessageController = TextEditingController(
+    text:
+    'I Saw Your Listing in SIGNPOST PHONE BOOK. I am Interested in your Products. Please Send Details/Call Me. (Sent Through Signpost PHONE BOOK)',
+  );
 
-  // Pincode & Prefix
-  List<String> pincodeList = [];
-  String? selectedPincode;
-
-  List<String> prefixList = [];
   String? selectedPrefix;
-
-  // SMS text
-  final TextEditingController _smsController = TextEditingController();
-  final int smsCharLimit = 145;
-
-  // Search results
-  List<Map<String, dynamic>> results = [];
-  List<String> selectedMobileNumbers = [];
+  List<dynamic> datas = [];
+  List<dynamic> selectedBusinesses = [];
   bool isLoading = false;
-  int page = 0;
-  final int pageSize = 20;
-  final ScrollController _scrollController = ScrollController();
+  bool showResults = false;
+  bool clrBtn = false;
+
+  final int maxSelection = 10;
+  final int maxLength = 290;
 
   @override
-  void initState() {
-    super.initState();
-    _fetchPincodeList();
-    _fetchPrefixList();
-    _scrollController.addListener(_scrollListener);
+  void dispose() {
+    _pincodeController.dispose();
+    _customMessageController.dispose();
+    super.dispose();
   }
 
-  Future<void> _fetchPincodeList() async {
-    try {
-      final response =
-      await SupabaseService.client.from('profiles').select('DISTINCT pincode');
-      setState(() {
-        pincodeList = List<String>.from(response.map((e) => e['pincode']));
-      });
-    } catch (e) {
-      debugPrint("Error fetching pincode list: $e");
-    }
-  }
+  Future<void> fetchBusinesses() async {
+    final pincode = _pincodeController.text.trim();
+    final prefix = selectedPrefix;
 
-  Future<void> _fetchPrefixList() async {
-    try {
-      final businessPrefixes =
-      await SupabaseService.client.from('business_prefix').select('prefix');
-      final personPrefixes =
-      await SupabaseService.client.from('person_prefix').select('prefix');
-
-      final combined = [
-        ...businessPrefixes.map((e) => e['prefix']),
-        ...personPrefixes.map((e) => e['prefix'])
-      ];
-
-      setState(() {
-        prefixList = List<String>.from(combined);
-      });
-    } catch (e) {
-      debugPrint("Error fetching prefix list: $e");
-    }
-  }
-
-  void _scrollListener() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
-      _fetchMoreResults();
-    }
-  }
-
-  Future<void> _searchResults({bool reset = true}) async {
-    if (reset) {
-      page = 0;
-      results.clear();
-    }
-
-    if (selectedPincode == null || selectedPrefix == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select pincode and prefix")),
-      );
+    if (pincode.isEmpty || prefix == null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Enter pincode & select prefix')));
       return;
     }
 
     setState(() => isLoading = true);
 
     try {
+      // Supabase query
       final response = await SupabaseService.client
           .from('profiles')
-          .select('business_name, person_name, mobile_number')
-          .ilike('mobile_number', '$selectedPrefix%')
-          .eq('pincode', selectedPincode!)
-          .range(page * pageSize, (page + 1) * pageSize - 1);
+          .select()
+          .or('pincode.eq.$pincode,business_prefix.eq.$prefix,person_prefix.eq.$prefix');
 
-      setState(() {
-        results.addAll(List<Map<String, dynamic>>.from(response));
-        page++;
-      });
+      // Await the builder to get data
+      final data = await response;
+
+      if (data == null || (data as List).isEmpty) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('No records found')));
+        setState(() {
+          datas = [];
+          showResults = false;
+        });
+      } else {
+        setState(() {
+          datas = data;
+          showResults = true;
+          clrBtn = true;
+          selectedBusinesses = [];
+        });
+      }
     } catch (e) {
-      debugPrint("Error fetching results: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error fetching results: $e")),
-      );
+      debugPrint('Fetch error: $e');
+      setState(() => isLoading = false);
     } finally {
       setState(() => isLoading = false);
     }
   }
 
-  Future<void> _fetchMoreResults() async {
-    if (!isLoading && results.length >= page * pageSize) {
-      await _searchResults(reset: false);
-    }
+
+  void clearFilters() {
+    _pincodeController.clear();
+    selectedPrefix = null;
+    datas = [];
+    selectedBusinesses = [];
+    clrBtn = false;
+    showResults = false;
+    setState(() {});
   }
 
-  void _toggleSelection(String mobile) {
-    if (selectedMobileNumbers.contains(mobile)) {
-      selectedMobileNumbers.remove(mobile);
+  void toggleSelection(dynamic item) {
+    final isSelected =
+    selectedBusinesses.any((i) => i['id'] == item['id']);
+    if (isSelected) {
+      setState(() {
+        selectedBusinesses.removeWhere((i) => i['id'] == item['id']);
+      });
     } else {
-      if (selectedMobileNumbers.length >= 10) {
+      if (selectedBusinesses.length < maxSelection) {
+        setState(() {
+          selectedBusinesses.add(item);
+        });
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("You can select up to 10 contacts only")),
-        );
-        return;
+            const SnackBar(content: Text('Maximum 10 recipients allowed')));
       }
-      selectedMobileNumbers.add(mobile);
     }
-    setState(() {});
   }
 
-  void _sendSms() {
-    if (_smsController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter a message")),
-      );
-      return;
-    }
-    if (selectedMobileNumbers.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select at least one contact")),
-      );
+  void sendSMSBatch() async {
+    if (selectedBusinesses.isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('No clients selected')));
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-            "Message sent to ${selectedMobileNumbers.length} contacts successfully!"),
-      ),
-    );
+    final numbers = selectedBusinesses
+        .map((e) => e['mobile_number'].toString())
+        .join(',');
 
-    // Reset selection
-    selectedMobileNumbers.clear();
-    setState(() {});
-  }
+    final smsUri =
+    Uri.parse('sms:$numbers?body=${Uri.encodeComponent(_customMessageController.text)}');
 
-  @override
-  void dispose() {
-    _smsController.dispose();
-    _scrollController.dispose();
-    super.dispose();
+    if (await canLaunchUrl(smsUri)) {
+      await launchUrl(smsUri);
+      // Clear after sending
+      clearFilters();
+      _customMessageController.text =
+      'I Saw Your Listing in SIGNPOST PHONE BOOK. I am Interested in your Products. Please Send Details/Call Me. (Sent Through Signpost PHONE BOOK)';
+    } else {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Cannot launch SMS app')));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Nearby Promotion")),
+      appBar: AppBar(title: const Text('Nearby Promotion')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Information dropdown
-            DropdownButtonFormField<String>(
-              value: selectedInfo,
-              hint: const Text("Select Information"),
-              items: infoOptions
-                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                  .toList(),
-              onChanged: (v) => setState(() => selectedInfo = v),
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: "Information",
-              ),
-            ),
-            const SizedBox(height: 10),
-
-            // Pincode input (autocomplete)
-            Autocomplete<String>(
-              optionsBuilder: (TextEditingValue textEditingValue) {
-                if (textEditingValue.text.isEmpty) return const Iterable<String>.empty();
-                return pincodeList.where((p) => p.contains(textEditingValue.text));
-              },
-              onSelected: (val) {
-                selectedPincode = val;
-              },
-              fieldViewBuilder: (context, controller, focusNode, onSubmit) {
-                return TextField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  decoration: const InputDecoration(
-                    labelText: "Pincode",
-                    border: OutlineInputBorder(),
-                  ),
-                  onChanged: (val) {
-                    selectedPincode = val;
-                  },
-                );
-              },
-            ),
-            const SizedBox(height: 10),
-
-            // Prefix dropdown
-            DropdownButtonFormField<String>(
-              value: selectedPrefix,
-              hint: const Text("Select Prefix"),
-              items: prefixList
-                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                  .toList(),
-              onChanged: (v) => setState(() => selectedPrefix = v),
-              decoration: const InputDecoration(
-                  border: OutlineInputBorder(), labelText: "Prefix"),
-            ),
-            const SizedBox(height: 10),
-
-            // Search button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.search),
-                label: const Text("Search"),
-                onPressed: _searchResults,
-              ),
-            ),
-            const SizedBox(height: 10),
-
-            // SMS input
+            // Message input
             TextField(
-              controller: _smsController,
-              maxLength: smsCharLimit,
-              maxLines: null,
-              decoration: InputDecoration(
-                border: const OutlineInputBorder(),
-                labelText: "Message",
-                counterText: "${_smsController.text.length}/$smsCharLimit",
-              ),
-              onChanged: (_) => setState(() {}),
+              controller: _customMessageController,
+              maxLength: maxLength,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                  labelText: 'Edit/Create Message', border: OutlineInputBorder()),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
 
-            // Send SMS button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.send),
-                label: const Text("Send SMS"),
-                onPressed: _sendSms,
-              ),
-            ),
-            const SizedBox(height: 10),
-
-            // Results list
-            ListView.builder(
-              physics: const NeverScrollableScrollPhysics(),
-              shrinkWrap: true,
-              controller: _scrollController,
-              itemCount: results.length + (isLoading ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index >= results.length) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                final item = results[index];
-                final mobile = item['mobile_number'] ?? '';
-                final maskedMobile = mobile.length >= 10
-                    ? '${mobile.substring(0, 5)}XXXX'
-                    : mobile;
-
-                final isSelected = selectedMobileNumbers.contains(mobile);
-
-                return Card(
-                  child: ListTile(
-                    title: Text(item['business_name'] ?? item['person_name'] ?? ''),
-                    subtitle: Text(maskedMobile),
-                    trailing: Checkbox(
-                      value: isSelected,
-                      onChanged: (_) => _toggleSelection(mobile),
-                    ),
-                  ),
+            // Prefix selection
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: ['Mr.', 'Ms.', 'M/s.'].map((p) {
+                final isSelected = selectedPrefix == p;
+                return ChoiceChip(
+                  label: Text(p),
+                  selected: isSelected,
+                  onSelected: (_) => setState(() => selectedPrefix = p),
                 );
-              },
+              }).toList(),
             ),
+            const SizedBox(height: 12),
+
+            // Pincode input
+            TextField(
+              controller: _pincodeController,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              decoration: const InputDecoration(
+                  labelText: 'Enter Pincode', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 12),
+
+            // Search / Clear button
+            ElevatedButton(
+              onPressed: clrBtn ? clearFilters : fetchBusinesses,
+              child: Text(clrBtn ? 'Clear' : 'Search'),
+            ),
+            const SizedBox(height: 12),
+
+
+            if (isLoading) const CircularProgressIndicator(),
+
+            if (showResults)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Top Send SMS button
+                  ElevatedButton(
+                    onPressed: selectedBusinesses.isEmpty ? null : sendSMSBatch,
+                    child: const Text('Send SMS'),
+                  ),
+                  const SizedBox(height: 8),
+                  Text('Results: ${datas.length}, Selected: ${selectedBusinesses.length}'),
+                  const SizedBox(height: 8),
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: datas.length,
+                    itemBuilder: (context, index) {
+                      final item = datas[index];
+                      final isSelected = selectedBusinesses.any((i) => i['id'] == item['id']);
+                      final name = item['business_name'] ?? item['person_name'] ?? 'No Name';
+                      final mobile = item['mobile_number'] ?? '';
+                      return Card(
+                        color: isSelected ? Colors.blue.shade100 : Colors.white,
+                        child: ListTile(
+                          onTap: () => toggleSelection(item),
+                          title: Text(name),
+                          subtitle: Text(
+                            mobile.length > 5
+                                ? mobile.substring(0, mobile.length - 5) + 'XXXXX'
+                                : mobile,
+                          ),
+                          trailing: Checkbox(
+                            value: isSelected,
+                            onChanged: (_) => toggleSelection(item),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  // Bottom Send SMS button (existing)
+                  ElevatedButton(
+                      onPressed:
+                      selectedBusinesses.isEmpty ? null : sendSMSBatch,
+                      child: const Text('Send SMS')),
+                ],
+              ),
+
           ],
         ),
       ),

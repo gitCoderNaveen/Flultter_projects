@@ -1,8 +1,6 @@
 import 'package:celfonephonebookapp/screens/admin_panel_page.dart';
 import 'package:celfonephonebookapp/screens/profile_page.dart';
-import 'package:celfonephonebookapp/screens/profile_settings_page.dart';
 import 'package:flutter/material.dart';
-import '../supabase/supabase.dart';
 import './signup.dart';
 import './signin.dart';
 import 'homepage_shell.dart';
@@ -16,7 +14,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  String? displayName; // Will hold business_name or person_name
+  String? displayName; // business_name or person_name
   bool _isLoading = true;
 
   @override
@@ -27,56 +25,20 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _loadUserProfile() async {
     setState(() => _isLoading = true);
-
     final prefs = await SharedPreferences.getInstance();
-    final cachedUserName = prefs.getString('userName');
+    final cachedUserName = prefs.getString('username'); // Check username key
 
-    if (cachedUserName != null && cachedUserName.isNotEmpty) {
-      setState(() {
-        displayName = cachedUserName;
-        _isLoading = false;
-      });
-    } else {
-      // Fallback if cache is empty
-      final user = SupabaseService.client.auth.currentUser;
-      if (user == null) {
-        setState(() => _isLoading = false);
-        return;
-      }
-
-      try {
-        final response = await SupabaseService.client
-            .from('profiles')
-            .select('business_name, person_name')
-            .eq('id', user.id)
-            .maybeSingle();
-
-        if (response != null) {
-          displayName = response['business_name']?.toString().isNotEmpty == true
-              ? response['business_name']
-              : response['person_name'];
-
-          // Cache the username locally for next time
-          await prefs.setString('userName', displayName ?? '');
-        }
-      } catch (e) {
-        debugPrint("⚠️ Error fetching profile: $e");
-      } finally {
-        setState(() => _isLoading = false);
-      }
-    }
+    setState(() {
+      displayName = cachedUserName;
+      _isLoading = false;
+    });
   }
 
   Future<void> _logout(BuildContext context) async {
     try {
-      // 1️⃣ Supabase sign out
-      await SupabaseService.client.auth.signOut();
-
-      // 2️⃣ Clear local storage
       final prefs = await SharedPreferences.getInstance();
-      await prefs.clear();
+      await prefs.clear(); // Clear SharedPreferences
 
-      // 3️⃣ Navigate back to login
       if (context.mounted) {
         Navigator.pushAndRemoveUntil(
           context,
@@ -93,7 +55,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final user = SupabaseService.client.auth.currentUser;
+    final bool isSignedIn = displayName != null && displayName!.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -114,9 +76,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 child: Text(
                   (displayName != null && displayName!.isNotEmpty)
                       ? displayName![0].toUpperCase()
-                      : (user?.email != null &&
-                      user!.email!.isNotEmpty)
-                      ? user.email![0].toUpperCase()
                       : "U",
                   style: const TextStyle(
                       fontSize: 28, fontWeight: FontWeight.bold),
@@ -124,9 +83,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                displayName ??
-                    user?.email ??
-                    "Guest User",
+                displayName ?? "Guest User",
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -137,7 +94,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
 
           // Auth options for guest
-          if (user == null) ...[
+          if (!isSignedIn) ...[
             Card(
               child: ListTile(
                 title: const Text("Sign In"),
@@ -172,9 +129,7 @@ class _SettingsPageState extends State<SettingsPage> {
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
               subtitle: const Text("Update your profile and business details"),
               onTap: () {
-                final user = SupabaseService.client.auth.currentUser;
-
-                if (user != null) {
+                if (isSignedIn) {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const ProfilePage()),
@@ -204,25 +159,21 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
 
-// 🔥 NEW: Admin Panel option
+          // Admin Panel
           Card(
             child: ListTile(
               title: const Text("Admin Panel"),
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
               subtitle: const Text("Access advanced admin features"),
               onTap: () {
-                final user = SupabaseService.client.auth.currentUser;
-
-                if (user != null) {
-                  // ✅ Navigate to Admin Panel if logged in
+                if (isSignedIn) {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const AdminPanelPage(), // <-- Create this screen
+                      builder: (_) => const AdminPanelPage(),
                     ),
                   );
                 } else {
-                  // ❌ Show alert if not logged in
                   showDialog(
                     context: context,
                     builder: (_) => AlertDialog(
@@ -260,7 +211,7 @@ class _SettingsPageState extends State<SettingsPage> {
           const Divider(),
 
           // Logout for logged-in user
-          if (user != null)
+          if (isSignedIn)
             Card(
               child: ListTile(
                 title: const Text("Logout"),

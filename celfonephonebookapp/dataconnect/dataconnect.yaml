@@ -1,0 +1,12 @@
+specVersion: "v1"
+serviceId: "celfonephonebookapp"
+location: "us-central1"
+schema:
+  source: "./schema"
+  datasource:
+    postgresql:
+      database: "fdcdb"
+      cloudSql:
+        instanceId: "celfonephonebookapp-fdc"
+      # schemaValidation: "COMPATIBLE"
+connectorDirs: ["./example"]

@@ -1,14 +1,23 @@
+import 'package:celfonephonebookapp/screens/categorywise_promotion.dart';
 import 'package:celfonephonebookapp/screens/media_partner_signup.dart';
 import 'package:celfonephonebookapp/screens/promotion_card.dart';
-import 'package:celfonephonebookapp/screens/signin.dart'; // <-- add signin page
+import 'package:celfonephonebookapp/screens/signin.dart';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import './nearby_promotion.dart';
 import './favorites.dart';
 
-class PromotionPage extends StatelessWidget {
+class PromotionPage extends StatefulWidget {
   const PromotionPage({super.key});
+
+  @override
+  State<PromotionPage> createState() => _PromotionPageState();
+}
+
+class _PromotionPageState extends State<PromotionPage> {
+  // Reactive login status
+  final ValueNotifier<bool> _signedIn = ValueNotifier(false);
 
   final List<Map<String, dynamic>> promotions = const [
     {
@@ -29,7 +38,7 @@ class PromotionPage extends StatelessWidget {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
-      "page": null, // not implemented
+      "page": CategoryPromotionPage(), // not implemented
     },
     {
       "title": "Favorites",
@@ -54,6 +63,49 @@ class PromotionPage extends StatelessWidget {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _loadSignedInStatus();
+  }
+
+  Future<void> _loadSignedInStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final username = prefs.getString('username');
+    _signedIn.value = username != null && username.isNotEmpty;
+  }
+
+  void _handlePromotionTap(Map<String, dynamic> promo) {
+    if (!_signedIn.value) {
+      // Not signed in → navigate to Signin
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const SigninPage()),
+      ).then((_) {
+        // Refresh login status when coming back from Signin
+        _loadSignedInStatus();
+      });
+    } else {
+      // Signed in → navigate to promo page if available
+      if (promo["page"] != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => promo["page"]),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Page not available yet")),
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _signedIn.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -61,41 +113,24 @@ class PromotionPage extends StatelessWidget {
         backgroundColor: const Color(0xFF306CBC),
       ),
       body: SafeArea(
-        child: ListView.builder(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-          itemCount: promotions.length,
-          itemBuilder: (context, index) {
-            final promo = promotions[index];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: PromotionCard(
-                title: promo["title"],
-                icon: promo["icon"],
-                gradient: promo["gradient"],
-                onPressed: () {
-                  final user = Supabase.instance.client.auth.currentUser;
-
-                  if (user == null) {
-                    // If not logged in → go to Signin
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const SigninPage()),
-                    );
-                  } else {
-                    // If logged in → go to promo page (if available)
-                    if (promo["page"] != null) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => promo["page"]),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Page not available yet")),
-                      );
-                    }
-                  }
-                },
-              ),
+        child: ValueListenableBuilder<bool>(
+          valueListenable: _signedIn,
+          builder: (context, signedIn, _) {
+            return ListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+              itemCount: promotions.length,
+              itemBuilder: (context, index) {
+                final promo = promotions[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: PromotionCard(
+                    title: promo["title"],
+                    icon: promo["icon"],
+                    gradient: promo["gradient"],
+                    onPressed: () => _handlePromotionTap(promo),
+                  ),
+                );
+              },
             );
           },
         ),
