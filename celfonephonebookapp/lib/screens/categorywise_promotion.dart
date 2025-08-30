@@ -37,13 +37,21 @@ class _CategoryPromotionPageState extends State<CategoryPromotionPage> {
           .from('profiles')
           .select()
           .order('id', ascending: false);
+
       if (data != null) {
         setState(() {
           allProfiles = data;
           filteredProfiles = List.from(data);
+
+          // collect unique keywords + profession suggestions
           citySuggestions = [
-            ...{for (var e in data) e['city']?.toString() ?? ''}
-          ]..removeWhere((element) => element.isEmpty); // unique cities
+            ...{
+              for (var e in data) ...[
+                e['keywords']?.toString() ?? '',
+                e['profession']?.toString() ?? ''
+              ]
+            }
+          ]..removeWhere((element) => element.isEmpty);
         });
       }
     } catch (e) {
@@ -53,14 +61,17 @@ class _CategoryPromotionPageState extends State<CategoryPromotionPage> {
     }
   }
 
-  void _filterByCity(String city) {
+  void _filterByCategory(String filter) {
     setState(() {
-      filteredProfiles = allProfiles
-          .where((p) =>
-          (p['city'] ?? '').toString().toLowerCase().contains(city.toLowerCase()))
-          .toList();
+      final lower = filter.toLowerCase();
+      filteredProfiles = allProfiles.where((p) {
+        final keywords = (p['keywords'] ?? '').toString().toLowerCase();
+        final profession = (p['profession'] ?? '').toString().toLowerCase();
+        return keywords.contains(lower) || profession.contains(lower);
+      }).toList();
     });
   }
+
 
   void _toggleClientSelection(dynamic client) {
     setState(() {
@@ -162,7 +173,7 @@ class _CategoryPromotionPageState extends State<CategoryPromotionPage> {
               },
               onSelected: (value) {
                 _cityController.text = value;
-                _filterByCity(value);
+                _filterByCategory(value);
               },
               fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
                 _cityController.text = controller.text;
@@ -170,10 +181,10 @@ class _CategoryPromotionPageState extends State<CategoryPromotionPage> {
                   controller: controller,
                   focusNode: focusNode,
                   decoration: const InputDecoration(
-                    labelText: 'Filter by City',
+                    labelText: 'Filter by Category',
                     border: OutlineInputBorder(),
                   ),
-                  onChanged: (value) => _filterByCity(value),
+                  onChanged: (value) => _filterByCategory(value),
                 );
               },
             ),

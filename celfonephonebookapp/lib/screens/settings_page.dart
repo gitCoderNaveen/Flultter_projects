@@ -37,7 +37,15 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _logout(BuildContext context) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.clear(); // Clear SharedPreferences
+
+      // Get the favorites first
+      final favorites = prefs.getStringList('favorites_') ?? [];
+
+      // Clear everything
+      await prefs.clear();
+
+      // Restore favorites
+      await prefs.setStringList('favorites_', favorites);
 
       if (context.mounted) {
         Navigator.pushAndRemoveUntil(
@@ -52,6 +60,7 @@ class _SettingsPageState extends State<SettingsPage> {
       );
     }
   }
+
 
   @override
   Widget build(BuildContext context) {

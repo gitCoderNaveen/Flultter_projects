@@ -119,9 +119,9 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 16),
 
-                // Tagline
                 const Text(
-                  "Find Anyone! AnyWhere!",
+                  "Celfon5G+ PHONE BOOK",
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 26,
@@ -130,8 +130,19 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  "Grow your business with your nearby customers.",
+                  "Multi Brand Mobile Users Directory",
+                  textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+                // Tagline
+                const Text(
+                  "Find Anyone! AnyWhere! & Grow",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 20),
 

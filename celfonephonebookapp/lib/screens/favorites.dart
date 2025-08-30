@@ -128,17 +128,21 @@ class _FavoritesPageState extends State<FavoritesPage> {
                           });
                         },
                       ),
-                      title: Text(data["name"] ?? ""),
-                      subtitle: Text(_maskMobile(data["mobile_number"])),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete),
-                        onPressed: () {
-                          setState(() {
-                            favorites[entry.key]?.removeAt(index);
-                          });
-                          _saveFavorites();
-                        },
-                      ),
+                        title: Text(
+                          (data["business_name"] != null && data["business_name"].toString().isNotEmpty)
+                              ? data["business_name"]
+                              : (data["person_name"] ?? ""),
+                        ),
+                        subtitle: Text(_maskMobile(data["mobile_number"])),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete),
+                          onPressed: () {
+                            setState(() {
+                              favorites[entry.key]?.removeAt(index);
+                            });
+                            _saveFavorites();
+                          },
+                        ),
                     );
                   }).toList(),
                 );

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:celfonephonebookapp/screens/signin.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -5,7 +6,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../supabase/supabase.dart'; // keep for fetch
 
 class SearchPage extends StatefulWidget {
-  const SearchPage({Key? key}) : super(key: key);
+  final String? category; // <-- accept category from navigation
+
+  const SearchPage({Key? key, this.category}) : super(key: key);
 
   @override
   State<SearchPage> createState() => _SearchPageState();
@@ -13,7 +16,7 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   int selectedIndex = 0;
-  final List<String> filters = ["All", "Business", "People", "Products"];
+  final List<String> filters = ["All", "Business", "Persons", "Products"];
   final TextEditingController _searchController = TextEditingController();
 
   List<dynamic> searchResults = [];
@@ -24,7 +27,7 @@ class _SearchPageState extends State<SearchPage> {
   void initState() {
     super.initState();
     _checkLoginStatus();
-    _performSearch("");
+    _performSearch(widget.category ?? ""); // pre-filter if category passed
   }
 
   Future<void> _checkLoginStatus() async {
@@ -40,24 +43,28 @@ class _SearchPageState extends State<SearchPage> {
     return number.substring(0, 5) + "XXXXX";
   }
 
-  RichText highlightText(String text, String query,
-      {Color color = Colors.blue}) {
-    if (query.isEmpty) return RichText(
-        text: TextSpan(text: text, style: const TextStyle(color: Colors.black)));
+  RichText highlightText(String text, String query, {Color color = Colors.blue}) {
+    if (query.isEmpty) {
+      return RichText(text: TextSpan(text: text, style: const TextStyle(color: Colors.black)));
+    }
 
     final matches = RegExp(RegExp.escape(query), caseSensitive: false).allMatches(text);
 
-    if (matches.isEmpty) return RichText(
-        text: TextSpan(text: text, style: const TextStyle(color: Colors.black)));
+    if (matches.isEmpty) {
+      return RichText(text: TextSpan(text: text, style: const TextStyle(color: Colors.black)));
+    }
 
     List<TextSpan> spans = [];
     int lastIndex = 0;
 
     for (final match in matches) {
       if (match.start > lastIndex) {
-        spans.add(TextSpan(text: text.substring(lastIndex, match.start), style: const TextStyle(color: Colors.black)));
+        spans.add(TextSpan(
+            text: text.substring(lastIndex, match.start),
+            style: const TextStyle(color: Colors.black)));
       }
-      spans.add(TextSpan(text: text.substring(match.start, match.end),
+      spans.add(TextSpan(
+          text: text.substring(match.start, match.end),
           style: TextStyle(color: color, fontWeight: FontWeight.bold)));
       lastIndex = match.end;
     }
@@ -77,15 +84,18 @@ class _SearchPageState extends State<SearchPage> {
 
       if (filterType == "business") {
         request = request.eq('user_type', 'business');
-      } else if (filterType == "people") {
+      } else if (filterType == "persons") {
         request = request.eq('user_type', 'person');
       }
 
       if (query.isNotEmpty) {
+        // check if Products tab
         if (filterType == "products") {
           request = request.ilike('keywords', '%$query%');
         } else {
-          request = request.or('business_name.ilike.%$query%,person_name.ilike.%$query%,city.ilike.%$query%');
+          // search across multiple fields
+          request = request.or(
+              'business_name.ilike.%$query%,person_name.ilike.%$query%,city.ilike.%$query%,keywords.ilike.%$query%,profession.ilike.%$query%');
         }
       }
 
@@ -98,7 +108,7 @@ class _SearchPageState extends State<SearchPage> {
     }
   }
 
-  void _showSigninAlert() {
+    void _showSigninAlert() {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -152,8 +162,11 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  void _toggleFavorite(Map item) {
+  Future<void> _toggleFavorite(Map item) async {
     if (!isLoggedIn) return _showSigninAlert();
+
+    final prefs = await SharedPreferences.getInstance();
+    const categories = ["Suppliers", "Buyers", "Friends & Family", "Others"];
 
     showModalBottomSheet(
       context: context,
@@ -163,25 +176,54 @@ class _SearchPageState extends State<SearchPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text("Select Category to Save Favorite",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text(
+                "Select Category to Save Favorite",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 16),
               Wrap(
                 spacing: 10,
-                children: ["Suppliers", "Buyers", "Friends & Family", "Others"].map((category) {
+                children: categories.map((category) {
                   return ElevatedButton(
-                      onPressed: () {
-                        setState(() {
-                          item['is_favorite'] = true;
+                    onPressed: () async {
+                      // Load existing favorites for this category
+                      List<String> stored = prefs.getStringList("favorites_$category") ?? [];
+                      List<Map<String, dynamic>> decoded =
+                      stored.map((e) => jsonDecode(e) as Map<String, dynamic>).toList();
+
+                      // Avoid duplicates based on mobile_number (or id if exists)
+                      final alreadyExists = decoded.any((f) =>
+                      f["mobile_number"] == item["mobile_number"] &&
+                          (f["business_name"] == item["business_name"] ||
+                              f["person_name"] == item["person_name"]));
+
+                      if (!alreadyExists) {
+                        decoded.add({
+                          "business_name": item["business_name"],
+                          "person_name": item["person_name"],
+                          "mobile_number": item["mobile_number"],
                         });
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content: Text(
-                                  "${item['business_name'] ?? item['person_name']} saved under $category")),
-                        );
-                      },
-                      child: Text(category));
+
+                        // Save back to SharedPreferences
+                        final encoded = decoded.map((e) => jsonEncode(e)).toList();
+                        await prefs.setStringList("favorites_$category", encoded);
+                      }
+
+                      setState(() {
+                        item['is_favorite'] = true;
+                      });
+
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            "${item['business_name'] ?? item['person_name']} saved under $category",
+                          ),
+                        ),
+                      );
+                    },
+                    child: Text(category),
+                  );
                 }).toList(),
               ),
             ],
@@ -190,6 +232,7 @@ class _SearchPageState extends State<SearchPage> {
       },
     );
   }
+
   Widget highlightKeywords(String keywords, String query) {
     if (query.isEmpty) return Text(keywords, style: const TextStyle(color: Colors.black));
 
@@ -320,9 +363,9 @@ class _SearchPageState extends State<SearchPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        title: const Text(
-          "Search Page",
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+        title: Text(
+          widget.category ?? "Search Page",
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
         ),
       ),
       body: Column(
@@ -371,7 +414,7 @@ class _SearchPageState extends State<SearchPage> {
               controller: _searchController,
               onChanged: (value) => _performSearch(value),
               decoration: InputDecoration(
-                hintText: "Search here...",
+                hintText: "Search by name, city, profession, keywords...",
                 prefixIcon: const Icon(Icons.search, color: Colors.black54),
                 filled: true,
                 fillColor: Colors.white,
@@ -392,7 +435,9 @@ class _SearchPageState extends State<SearchPage> {
               itemBuilder: (context, index) {
                 final item = searchResults[index];
                 final isPrime = item['is_prime'] ?? false;
-                final name = item['business_name'] ?? item['person_name'] ?? "No Name";
+                final name = item['business_name']?.toString().isNotEmpty == true
+                    ? item['business_name']
+                    : (item['person_name'] ?? "No Name");
                 final keywords = item['keywords'] ?? "";
 
                 return GestureDetector(
@@ -416,19 +461,20 @@ class _SearchPageState extends State<SearchPage> {
                             Text(maskMobile(item['mobile_number'])),
                           if (item['city'] != null)
                             Text(item['city']),
+                          if (item['profession'] != null)
+                            Text("Profession: ${item['profession']}"),
                           if (selectedIndex == 3 && keywords.isNotEmpty) ...[
                             const SizedBox(height: 6),
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text("Keywords: ", style: TextStyle(fontWeight: FontWeight.bold)),
+                                const Text("Products: ", style: TextStyle(fontWeight: FontWeight.bold)),
                                 Expanded(child: highlightKeywords(keywords, _searchController.text)),
                               ],
                             ),
                           ]
                         ],
                       ),
-
                       trailing: Wrap(
                         spacing: 8,
                         children: [
