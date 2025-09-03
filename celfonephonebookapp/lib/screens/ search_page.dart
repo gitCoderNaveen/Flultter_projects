@@ -3,12 +3,14 @@ import 'package:celfonephonebookapp/screens/signin.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../supabase/supabase.dart'; // keep for fetch
+import '../supabase/supabase.dart';
 
 class SearchPage extends StatefulWidget {
-  final String? category; // <-- accept category from navigation
+  final String? category; // optional category
+  final String? selectedLetter; // optional letter from HomePage
+  final List<dynamic>? filteredCompanies; // optional pre-filtered list
 
-  const SearchPage({Key? key, this.category}) : super(key: key);
+  const SearchPage({Key? key, this.category, this.selectedLetter, this.filteredCompanies}) : super(key: key);
 
   @override
   State<SearchPage> createState() => _SearchPageState();
@@ -27,7 +29,13 @@ class _SearchPageState extends State<SearchPage> {
   void initState() {
     super.initState();
     _checkLoginStatus();
-    _performSearch(widget.category ?? ""); // pre-filter if category passed
+
+    // If HomePage passed filteredCompanies, use them directly
+    if (widget.filteredCompanies != null && widget.filteredCompanies!.isNotEmpty) {
+      searchResults = widget.filteredCompanies!;
+    } else {
+      _performSearch(widget.category ?? widget.selectedLetter ?? "");
+    }
   }
 
   Future<void> _checkLoginStatus() async {
@@ -44,24 +52,18 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   RichText highlightText(String text, String query, {Color color = Colors.blue}) {
-    if (query.isEmpty) {
-      return RichText(text: TextSpan(text: text, style: const TextStyle(color: Colors.black)));
-    }
+    if (query.isEmpty) return RichText(text: TextSpan(text: text, style: const TextStyle(color: Colors.black)));
 
     final matches = RegExp(RegExp.escape(query), caseSensitive: false).allMatches(text);
 
-    if (matches.isEmpty) {
-      return RichText(text: TextSpan(text: text, style: const TextStyle(color: Colors.black)));
-    }
+    if (matches.isEmpty) return RichText(text: TextSpan(text: text, style: const TextStyle(color: Colors.black)));
 
     List<TextSpan> spans = [];
     int lastIndex = 0;
 
     for (final match in matches) {
       if (match.start > lastIndex) {
-        spans.add(TextSpan(
-            text: text.substring(lastIndex, match.start),
-            style: const TextStyle(color: Colors.black)));
+        spans.add(TextSpan(text: text.substring(lastIndex, match.start), style: const TextStyle(color: Colors.black)));
       }
       spans.add(TextSpan(
           text: text.substring(match.start, match.end),
@@ -89,11 +91,9 @@ class _SearchPageState extends State<SearchPage> {
       }
 
       if (query.isNotEmpty) {
-        // check if Products tab
         if (filterType == "products") {
           request = request.ilike('keywords', '%$query%');
         } else {
-          // search across multiple fields
           request = request.or(
               'business_name.ilike.%$query%,person_name.ilike.%$query%,city.ilike.%$query%,keywords.ilike.%$query%,profession.ilike.%$query%');
         }
@@ -108,7 +108,7 @@ class _SearchPageState extends State<SearchPage> {
     }
   }
 
-    void _showSigninAlert() {
+  void _showSigninAlert() {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -164,7 +164,6 @@ class _SearchPageState extends State<SearchPage> {
 
   Future<void> _toggleFavorite(Map item) async {
     if (!isLoggedIn) return _showSigninAlert();
-
     final prefs = await SharedPreferences.getInstance();
     const categories = ["Suppliers", "Buyers", "Friends & Family", "Others"];
 
@@ -186,12 +185,12 @@ class _SearchPageState extends State<SearchPage> {
                 children: categories.map((category) {
                   return ElevatedButton(
                     onPressed: () async {
-                      // Load existing favorites for this category
-                      List<String> stored = prefs.getStringList("favorites_$category") ?? [];
-                      List<Map<String, dynamic>> decoded =
-                      stored.map((e) => jsonDecode(e) as Map<String, dynamic>).toList();
+                      List<String> stored =
+                          prefs.getStringList("favorites_$category") ?? [];
+                      List<Map<String, dynamic>> decoded = stored
+                          .map((e) => jsonDecode(e) as Map<String, dynamic>)
+                          .toList();
 
-                      // Avoid duplicates based on mobile_number (or id if exists)
                       final alreadyExists = decoded.any((f) =>
                       f["mobile_number"] == item["mobile_number"] &&
                           (f["business_name"] == item["business_name"] ||
@@ -204,9 +203,10 @@ class _SearchPageState extends State<SearchPage> {
                           "mobile_number": item["mobile_number"],
                         });
 
-                        // Save back to SharedPreferences
-                        final encoded = decoded.map((e) => jsonEncode(e)).toList();
-                        await prefs.setStringList("favorites_$category", encoded);
+                        final encoded =
+                        decoded.map((e) => jsonEncode(e)).toList();
+                        await prefs.setStringList(
+                            "favorites_$category", encoded);
                       }
 
                       setState(() {
@@ -237,7 +237,7 @@ class _SearchPageState extends State<SearchPage> {
     if (query.isEmpty) return Text(keywords, style: const TextStyle(color: Colors.black));
 
     List<InlineSpan> spans = [];
-    final splitKeywords = keywords.split(','); // Split by comma
+    final splitKeywords = keywords.split(',');
 
     for (int i = 0; i < splitKeywords.length; i++) {
       final word = splitKeywords[i];
@@ -266,7 +266,6 @@ class _SearchPageState extends State<SearchPage> {
 
     return RichText(text: TextSpan(children: spans));
   }
-
 
   void _openDetailsModal(Map item) {
     if (!isLoggedIn) return _showSigninAlert();
@@ -364,7 +363,7 @@ class _SearchPageState extends State<SearchPage> {
         elevation: 0,
         centerTitle: true,
         title: Text(
-          widget.category ?? "Search Page",
+          widget.category ?? widget.selectedLetter ?? "Search Page",
           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
         ),
       ),

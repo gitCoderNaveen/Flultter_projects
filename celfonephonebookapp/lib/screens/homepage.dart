@@ -1,9 +1,11 @@
+import 'package:celfonephonebookapp/screens/%20search_page.dart';
 import 'package:celfonephonebookapp/screens/signin.dart';
 import 'package:flutter/material.dart';
 import '../widgets/ carousel_widget.dart';
 import '../widgets/playbook_carousel.dart';
 import './ search_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../supabase/supabase.dart'; // Make sure your supabase.dart is set up
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -24,6 +26,9 @@ class _HomePageState extends State<HomePage> {
     {"title": "Machinery", "icon": "⚙️"},
   ];
 
+  final List<String> letters =
+  List.generate(26, (index) => String.fromCharCode(65 + index));
+
   @override
   void initState() {
     super.initState();
@@ -35,11 +40,13 @@ class _HomePageState extends State<HomePage> {
     final prefs = await SharedPreferences.getInstance();
     final cachedName = prefs.getString("username");
 
+
     if (cachedName != null && cachedName.isNotEmpty) {
       setState(() {
         username = cachedName;
       });
       debugPrint("📦 Loaded cached username: $cachedName");
+
     } else {
       // No username saved → Guest mode
       Future.delayed(const Duration(seconds: 3), () {
@@ -111,9 +118,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                     IconButton(
                       icon: const Icon(Icons.notifications, color: Colors.white),
-                      onPressed: () {
-                        // TODO: Notifications screen
-                      },
+                      onPressed: () {},
                     ),
                   ],
                 ),
@@ -134,7 +139,6 @@ class _HomePageState extends State<HomePage> {
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.white70, fontSize: 14),
                 ),
-                // Tagline
                 const Text(
                   "Find Anyone! AnyWhere! & Grow",
                   textAlign: TextAlign.center,
@@ -150,7 +154,8 @@ class _HomePageState extends State<HomePage> {
                 GestureDetector(
                   onTap: () => _goToSearch(context),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
@@ -177,6 +182,76 @@ class _HomePageState extends State<HomePage> {
               "assets/images/images2.png",
               "assets/images/images3.png",
             ],
+          ),
+
+          const SizedBox(height: 24),
+
+          // 🔹 A-Z Horizontal Scroll
+          SizedBox(
+            height: 60,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              itemCount: letters.length,
+              itemBuilder: (context, index) {
+                final letter = letters[index];
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                    ),
+                    onPressed: () async {
+                      try {
+                        final response = await SupabaseService.client
+                            .from('profiles')
+                            .select()
+                            .or('business_name.ilike.${letter}%,person_name.ilike.${letter}%')
+                            .order('business_name', ascending: true);
+
+                        final filtered = response as List<dynamic>? ?? [];
+
+                        if (filtered.isEmpty) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('No listings found for "$letter"')),
+                            );
+                          }
+                          return;
+                        }
+
+                        if (context.mounted) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => SearchPage(
+                                filteredCompanies: filtered,
+                                selectedLetter: letter,
+                              ),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        debugPrint('Error fetching data: $e');
+                      }
+                    },
+
+                    child: Text(
+                      letter,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
 
           const SizedBox(height: 24),
@@ -208,7 +283,8 @@ class _HomePageState extends State<HomePage> {
                   itemBuilder: (context, index) {
                     final category = categories[index];
                     return GestureDetector(
-                      onTap: () => _goToSearch(context, category: category["title"]),
+                      onTap: () =>
+                          _goToSearch(context, category: category["title"]),
                       child: Container(
                         decoration: BoxDecoration(
                           color: Colors.blue[50],

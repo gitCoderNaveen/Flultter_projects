@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../supabase/supabase.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -12,10 +13,11 @@ class ProfileSettingsPage extends StatefulWidget {
 class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   final _formKey = GlobalKey<FormState>();
 
-  // Form fields
   final TextEditingController _businessNameController = TextEditingController();
   final TextEditingController _personNameController = TextEditingController();
-  final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _doorNoController = TextEditingController();
+  final TextEditingController _streetController = TextEditingController();
+  final TextEditingController _areaController = TextEditingController();
   final TextEditingController _cityController = TextEditingController();
   final TextEditingController _pincodeController = TextEditingController();
   final TextEditingController _mobileController = TextEditingController();
@@ -26,27 +28,31 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   @override
   void initState() {
     super.initState();
-    _loadUserProfile();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadUserProfile();
+    });
   }
 
   Future<void> _loadUserProfile() async {
-    final user = SupabaseService.client.auth.currentUser;
-    if (user == null) return;
-
     setState(() => _isLoading = true);
 
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString("userId");
+      if (userId == null) return;
+
       final data = await SupabaseService.client
           .from('profiles')
           .select()
-          .eq('id', user.id)
+          .eq('id', userId)
           .maybeSingle();
 
       if (data != null) {
-        // Populate fields with existing values
         _businessNameController.text = data['business_name'] ?? '';
         _personNameController.text = data['person_name'] ?? '';
-        _addressController.text = data['address'] ?? '';
+        _doorNoController.text = data['door_no'] ?? '';
+        _streetController.text = data['street'] ?? '';
+        _areaController.text = data['area'] ?? '';
         _cityController.text = data['city'] ?? '';
         _pincodeController.text = data['pincode'] ?? '';
         _mobileController.text = data['mobile_number'] ?? '';
@@ -54,7 +60,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     } catch (e) {
       debugPrint("⚠️ Error loading profile: $e");
     } finally {
-      setState(() => _isLoading = false);
+      setState(() => _isLoading = false); // Make sure to hide the loader
     }
   }
 
@@ -62,31 +68,30 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
-    final user = SupabaseService.client.auth.currentUser;
-    if (user == null) return;
-
     try {
-      // Update profile data
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString("userId");
+      if (userId == null) return;
+
       await SupabaseService.client.from('profiles').upsert({
-        'id': user.id,
+        'id': userId,
         'business_name': _businessNameController.text.trim(),
         'person_name': _personNameController.text.trim(),
-        'address': _addressController.text.trim(),
+        'door_no': _doorNoController.text.trim(),
+        'street': _streetController.text.trim(),
+        'area': _areaController.text.trim(),
         'city': _cityController.text.trim(),
         'pincode': _pincodeController.text.trim(),
         'mobile_number': _mobileController.text.trim(),
       });
 
-      // Update password if provided
       if (_passwordController.text.isNotEmpty) {
         await SupabaseService.client.auth.updateUser(
           UserAttributes(password: _passwordController.text),
         );
       }
 
-      if (context.mounted) {
-        _showSuccessDialog();
-      }
+      if (context.mounted) _showSuccessDialog();
     } catch (e) {
       debugPrint("⚠️ Error updating profile: $e");
       if (context.mounted) {
@@ -118,7 +123,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop(); // Close dialog
-                Navigator.of(context).pop(); // Go back to previous screen
+                Navigator.of(context).pop(); // Go back
               },
               child: const Text("OK"),
             ),
@@ -131,9 +136,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Profile Settings"),
-      ),
+      appBar: AppBar(title: const Text("Profile Settings")),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -142,55 +145,62 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
           key: _formKey,
           child: Column(
             children: [
-              // Business Name
               TextFormField(
                 controller: _businessNameController,
-                decoration:
-                const InputDecoration(labelText: "Business Name"),
+                decoration: const InputDecoration(labelText: "Business Name"),
               ),
-
-              // Person Name
               TextFormField(
                 controller: _personNameController,
-                decoration:
-                const InputDecoration(labelText: "Person Name"),
+                decoration: const InputDecoration(labelText: "Person Name"),
               ),
-
-              // Address
-              TextFormField(
-                controller: _addressController,
-                decoration: const InputDecoration(labelText: "Address"),
+              // Address Row: Door No, Street, Area
+              Row(
+                children: [
+                  Expanded(
+                    flex: 1,
+                    child: TextFormField(
+                      controller: _doorNoController,
+                      decoration: const InputDecoration(labelText: "Door No"),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 2,
+                    child: TextFormField(
+                      controller: _streetController,
+                      decoration: const InputDecoration(labelText: "Street"),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 2,
+                    child: TextFormField(
+                      controller: _areaController,
+                      decoration: const InputDecoration(labelText: "Area"),
+                    ),
+                  ),
+                ],
               ),
-
-              // City
               TextFormField(
                 controller: _cityController,
                 decoration: const InputDecoration(labelText: "City"),
               ),
-
-              // Pincode
               TextFormField(
                 controller: _pincodeController,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(labelText: "Pincode"),
               ),
-
-              // Mobile Number
               TextFormField(
                 controller: _mobileController,
                 keyboardType: TextInputType.phone,
-                decoration:
-                const InputDecoration(labelText: "Mobile Number"),
+                decoration: const InputDecoration(labelText: "Mobile Number"),
               ),
-
-              // Password
               TextFormField(
                 controller: _passwordController,
                 obscureText: true,
                 decoration: const InputDecoration(
                     labelText: "New Password (Leave blank to keep)"),
               ),
-
               const SizedBox(height: 20),
               ElevatedButton.icon(
                 onPressed: _saveProfile,
