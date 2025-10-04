@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../supabase/supabase.dart'; // Import your SupabaseService
+import '../supabase/supabase.dart'; // Make sure this points to your SupabaseService
 
 class AdminPanelPage extends StatefulWidget {
   const AdminPanelPage({super.key});
@@ -22,26 +22,41 @@ class _AdminPanelPageState extends State<AdminPanelPage> {
   }
 
   Future<void> _fetchStats() async {
+    setState(() => _isLoading = true);
+
     try {
-      final profiles = SupabaseService.client.from('profiles');
+      final client = SupabaseService.client;
 
-      final allUsers = await profiles.select('id');
-      final businesses = await profiles.select('id').eq('user_type', 'business');
-      final people = await profiles.select('id').eq('user_type', 'person');
-      final primes = await profiles.select('id').eq('is_prime', true);
+      // Fetch all rows safely
+      final totalUsersResponse = await client.from('profiles').select('id');
+      final totalBusinessesResponse =
+      await client.from('profiles').select('id').eq('user_type', 'business');
+      final totalPeopleResponse =
+      await client.from('profiles').select('id').eq('user_type', 'person');
+      final totalPrimeResponse =
+      await client.from('profiles').select('id').eq('is_prime', true);
 
+      // Count locally and safely
       setState(() {
-        totalUsers = allUsers.length;
-        totalBusinesses = businesses.length;
-        totalPeople = people.length;
-        totalPrime = primes.length;
+        totalUsers = (totalUsersResponse as List?)?.length ?? 0;
+        totalBusinesses = (totalBusinessesResponse as List?)?.length ?? 0;
+        totalPeople = (totalPeopleResponse as List?)?.length ?? 0;
+        totalPrime = (totalPrimeResponse as List?)?.length ?? 0;
         _isLoading = false;
       });
+
+      // Debug logs to see what data is fetched
+      debugPrint("All Users: $totalUsersResponse");
+      debugPrint("Businesses: $totalBusinessesResponse");
+      debugPrint("People: $totalPeopleResponse");
+      debugPrint("Prime Users: $totalPrimeResponse");
     } catch (e) {
       debugPrint("⚠️ Error fetching stats: $e");
       setState(() => _isLoading = false);
     }
   }
+
+
 
   Widget _buildStatTile(String title, int value, Color color, IconData icon) {
     return Card(
@@ -97,10 +112,14 @@ class _AdminPanelPageState extends State<AdminPanelPage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            _buildStatTile("Total Users", totalUsers, Colors.blue, Icons.people),
-            _buildStatTile("Total Businesses", totalBusinesses, Colors.green, Icons.business),
-            _buildStatTile("Total People", totalPeople, Colors.orange, Icons.person),
-            _buildStatTile("Total Prime Users", totalPrime, Colors.purple, Icons.star),
+            _buildStatTile(
+                "Total Users", totalUsers, Colors.blue, Icons.people),
+            _buildStatTile("Total Businesses", totalBusinesses,
+                Colors.green, Icons.business),
+            _buildStatTile(
+                "Total People", totalPeople, Colors.orange, Icons.person),
+            _buildStatTile("Total Prime Users", totalPrime,
+                Colors.purple, Icons.star),
           ],
         ),
       ),

@@ -4,6 +4,7 @@ import './screens/splash_screen.dart';
 import 'supabase/supabase.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -11,6 +12,7 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   await SupabaseService.init();
+
   runApp(const MyApp());
 }
 
@@ -26,6 +28,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         useMaterial3: true,
       ),
+      // ✅ Start with SplashScreen, it will decide where to go
       home: const SplashScreen(),
     );
   }

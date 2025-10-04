@@ -40,7 +40,7 @@ class _HomePageShellState extends State<HomePageShell> {
           BottomNavigationBarItem(icon: Icon(Icons.local_offer), label: "Offers"),
           BottomNavigationBarItem(icon: Icon(Icons.search), label: "Search"),
           BottomNavigationBarItem(icon: Icon(Icons.campaign), label: "Promotion"),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: "Settings"),
+          BottomNavigationBarItem(icon: Icon(Icons.menu_book), label: "MENU"),
         ],
       ),
     );

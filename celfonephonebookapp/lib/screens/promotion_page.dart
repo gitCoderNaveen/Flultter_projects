@@ -50,16 +50,6 @@ class _PromotionPageState extends State<PromotionPage> {
       ),
       "page": FavoritesPage(),
     },
-    {
-      "title": "Media Partner",
-      "icon": Icons.camera_alt,
-      "gradient": LinearGradient(
-        colors: [Color(0xFF4568DC), Color(0xFFB06AB3)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      "page": MediaPartnerSignupPage(),
-    },
   ];
 
   @override

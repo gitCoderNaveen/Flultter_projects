@@ -1,4 +1,3 @@
-// splash_screen.dart
 import 'package:flutter/material.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -27,9 +26,9 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     final prefs = await SharedPreferences.getInstance();
-    final seenOnboarding = prefs.getBool('seenOnboarding') ?? false;
+    final showOnboarding = prefs.getBool('showOnboarding') ?? true;
 
-    if (!seenOnboarding) {
+    if (showOnboarding) {
       // 🚀 First-time user → Onboarding
       Navigator.pushReplacement(
         context,
@@ -40,10 +39,20 @@ class _SplashScreenState extends State<SplashScreen> {
 
     // ✅ Already completed onboarding
     final session = SupabaseService.client.auth.currentSession;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const HomePageShell()),
-    );
+
+    if (session != null) {
+      // Logged in → HomePage
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomePageShell()),
+      );
+    } else {
+      // Not logged in yet → still take to homepage (you can change this to login screen if needed)
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomePageShell()),
+      );
+    }
   }
 
   @override

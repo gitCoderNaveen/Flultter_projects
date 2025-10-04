@@ -1,218 +1,241 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../supabase/supabase.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:image_picker/image_picker.dart';
+import '../supabase/supabase.dart'; // your wrapper
 
-class ProfileSettingsPage extends StatefulWidget {
-  const ProfileSettingsPage({super.key});
+class ProfilePage extends StatefulWidget {
+  const ProfilePage({super.key});
 
   @override
-  State<ProfileSettingsPage> createState() => _ProfileSettingsPageState();
+  State<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
-  final _formKey = GlobalKey<FormState>();
-
-  final TextEditingController _businessNameController = TextEditingController();
-  final TextEditingController _personNameController = TextEditingController();
-  final TextEditingController _doorNoController = TextEditingController();
-  final TextEditingController _streetController = TextEditingController();
-  final TextEditingController _areaController = TextEditingController();
-  final TextEditingController _cityController = TextEditingController();
-  final TextEditingController _pincodeController = TextEditingController();
-  final TextEditingController _mobileController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-
+class _ProfilePageState extends State<ProfilePage> {
   bool _isLoading = false;
+  String? _userId;
+  Map<String, dynamic> _profileData = {};
+  String? _editingField; // track which field is in edit mode
+  final Map<String, TextEditingController> _controllers = {};
+
+  final ImagePicker _picker = ImagePicker();
+  List<String> _uploadedImages = [];
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadUserProfile();
-    });
+    _loadUserProfile();
   }
 
   Future<void> _loadUserProfile() async {
     setState(() => _isLoading = true);
-
     try {
       final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getString("userId");
-      if (userId == null) return;
+      _userId = prefs.getString("userId");
+
+      if (_userId == null) {
+        debugPrint("⚠️ userId not found in SharedPreferences");
+        return;
+      }
 
       final data = await SupabaseService.client
-          .from('profiles')
+          .from("profiles")
           .select()
-          .eq('id', userId)
+          .eq("id", _userId as Object)
           .maybeSingle();
 
       if (data != null) {
-        _businessNameController.text = data['business_name'] ?? '';
-        _personNameController.text = data['person_name'] ?? '';
-        _doorNoController.text = data['door_no'] ?? '';
-        _streetController.text = data['street'] ?? '';
-        _areaController.text = data['area'] ?? '';
-        _cityController.text = data['city'] ?? '';
-        _pincodeController.text = data['pincode'] ?? '';
-        _mobileController.text = data['mobile_number'] ?? '';
+        _profileData = data;
+        for (final field in _profileData.keys) {
+          _controllers[field] =
+              TextEditingController(text: _profileData[field]?.toString() ?? "");
+        }
+        _uploadedImages = List<String>.from(data['product_image'] ?? []);
       }
     } catch (e) {
       debugPrint("⚠️ Error loading profile: $e");
     } finally {
-      setState(() => _isLoading = false); // Make sure to hide the loader
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _saveProfile() async {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _updateField(String fieldName) async {
+    if (_userId == null) return;
 
-    setState(() => _isLoading = true);
+    final newValue = _controllers[fieldName]?.text.trim() ?? "";
+
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getString("userId");
-      if (userId == null) return;
+      // Build full row data for upsert to avoid NOT NULL constraint errors
+      final upsertData = {
+        "id": _userId!,
+        "business_name": _profileData["business_name"] ?? "",
+        "person_name": _profileData["person_name"] ?? "",
+        "mobile_number": _profileData["mobile_number"] ?? "",
+        "address": _profileData["address"] ?? "",
+        "keywords": _profileData["keywords"] ?? "",
+        "description": _profileData["description"] ?? "",
+        "city": _profileData["city"] ?? "",
+        "pincode": _profileData["pincode"] ?? "",
+        "whats_app": _profileData["whats_app"] ?? "",
+        "email": _profileData["email"] ?? "",
+        "password": _profileData["password"] ?? "",
+        // Add other NOT NULL fields if any
+      };
 
-      await SupabaseService.client.from('profiles').upsert({
-        'id': userId,
-        'business_name': _businessNameController.text.trim(),
-        'person_name': _personNameController.text.trim(),
-        'door_no': _doorNoController.text.trim(),
-        'street': _streetController.text.trim(),
-        'area': _areaController.text.trim(),
-        'city': _cityController.text.trim(),
-        'pincode': _pincodeController.text.trim(),
-        'mobile_number': _mobileController.text.trim(),
+      // Update only the edited field
+      upsertData[fieldName] = newValue;
+
+      // Upsert the complete row
+      await SupabaseService.client.from("profiles").upsert(upsertData);
+
+      setState(() {
+        _profileData[fieldName] = newValue;
+        _editingField = null;
       });
 
-      if (_passwordController.text.isNotEmpty) {
-        await SupabaseService.client.auth.updateUser(
-          UserAttributes(password: _passwordController.text),
-        );
-      }
-
-      if (context.mounted) _showSuccessDialog();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("$fieldName updated successfully")),
+      );
     } catch (e) {
-      debugPrint("⚠️ Error updating profile: $e");
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to update profile: $e")),
-        );
-      }
-    } finally {
-      setState(() => _isLoading = false);
+      debugPrint("⚠️ Failed to update $fieldName: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to update $fieldName")),
+      );
     }
   }
 
-  void _showSuccessDialog() {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.check_circle, color: Colors.green, size: 60),
-            const SizedBox(height: 16),
-            const Text(
-              "Profile updated successfully",
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close dialog
-                Navigator.of(context).pop(); // Go back
-              },
-              child: const Text("OK"),
-            ),
-          ],
+
+
+
+
+
+
+  Future<void> _pickAndUploadImage() async {
+    final picked = await _picker.pickImage(source: ImageSource.gallery);
+    if (picked == null || _userId == null) return;
+
+    final file = File(picked.path);
+    final fileName = "${DateTime.now().millisecondsSinceEpoch}_${picked.name}";
+
+    try {
+      final storagePath = "product_images/$_userId/$fileName";
+      await SupabaseService.client.storage
+          .from("uploads") // bucket name in Supabase
+          .upload(storagePath, file);
+
+      final publicUrl = SupabaseService.client.storage
+          .from("uploads")
+          .getPublicUrl(storagePath);
+
+      _uploadedImages.add(publicUrl);
+
+      // update array column in profiles
+      await SupabaseService.client.from("profiles").update({
+        "product_image": _uploadedImages,
+      }).eq("id", _userId!);
+
+      setState(() {});
+    } catch (e) {
+      debugPrint("⚠️ Image upload failed: $e");
+    }
+  }
+
+  Widget _buildField(String label, String fieldName) {
+    // Ensure controller exists
+    if (!_controllers.containsKey(fieldName)) {
+      _controllers[fieldName] =
+          TextEditingController(text: _profileData[fieldName]?.toString() ?? "");
+    }
+
+    final controller = _controllers[fieldName]!;
+    final value = controller.text;
+    final displayValue = value.isEmpty ? "<empty>" : value;
+    final isEditing = _editingField == fieldName;
+
+    return ListTile(
+      title: isEditing
+          ? TextField(
+        controller: controller,
+        autofocus: true,
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: "Enter $label",
         ),
+        onSubmitted: (_) {
+          _updateField(fieldName); // Save when Enter is pressed
+        },
+      )
+          : Text("$label: $displayValue"),
+      trailing: IconButton(
+        icon: Icon(
+          isEditing ? Icons.check : Icons.edit,
+          color: isEditing ? Colors.green : Colors.blue,
+        ),
+        onPressed: () {
+          if (isEditing) {
+            _updateField(fieldName); // Save edited value
+          } else {
+            setState(() => _editingField = fieldName);
+          }
+        },
       ),
     );
   }
 
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Profile Settings")),
+      appBar: AppBar(title: const Text("Profile")),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              TextFormField(
-                controller: _businessNameController,
-                decoration: const InputDecoration(labelText: "Business Name"),
-              ),
-              TextFormField(
-                controller: _personNameController,
-                decoration: const InputDecoration(labelText: "Person Name"),
-              ),
-              // Address Row: Door No, Street, Area
-              Row(
-                children: [
-                  Expanded(
-                    flex: 1,
-                    child: TextFormField(
-                      controller: _doorNoController,
-                      decoration: const InputDecoration(labelText: "Door No"),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 2,
-                    child: TextFormField(
-                      controller: _streetController,
-                      decoration: const InputDecoration(labelText: "Street"),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 2,
-                    child: TextFormField(
-                      controller: _areaController,
-                      decoration: const InputDecoration(labelText: "Area"),
-                    ),
-                  ),
-                ],
-              ),
-              TextFormField(
-                controller: _cityController,
-                decoration: const InputDecoration(labelText: "City"),
-              ),
-              TextFormField(
-                controller: _pincodeController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: "Pincode"),
-              ),
-              TextFormField(
-                controller: _mobileController,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: "Mobile Number"),
-              ),
-              TextFormField(
-                controller: _passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                    labelText: "New Password (Leave blank to keep)"),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton.icon(
-                onPressed: _saveProfile,
-                icon: const Icon(Icons.save),
-                label: const Text("Save Changes"),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 50),
-                  textStyle: const TextStyle(fontSize: 16),
-                ),
-              ),
-            ],
-          ),
+          : RefreshIndicator(
+        onRefresh: _loadUserProfile,
+        child: ListView(
+          padding: const EdgeInsets.all(8),
+          children: [
+            _buildField("Business Name", "business_name"),
+            _buildField("Person Name", "person_name"),
+            // _buildField("Mobile Number", "mobile_number"),
+            _buildField("Address", "address"),
+            _buildField("Keywords", "keywords"),
+            // _buildField("Description", "description"),
+            _buildField("City", "city"),
+            _buildField("Pincode", "pincode"),
+            _buildField("WhatsApp", "whats_app"),
+            _buildField("Email", "email"),
+            // _buildField("Password", "password"),
+            // const Divider(),
+            // const Text("Product Images",
+            //     style:
+            //     TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            // Wrap(
+            //   spacing: 8,
+            //   runSpacing: 8,
+            //   children: [
+            //     ..._uploadedImages.map(
+            //           (url) => ClipRRect(
+            //         borderRadius: BorderRadius.circular(8),
+            //         child: Image.network(url,
+            //             width: 100, height: 100, fit: BoxFit.cover),
+            //       ),
+            //     ),
+            //     GestureDetector(
+            //       onTap: _pickAndUploadImage,
+            //       child: Container(
+            //         width: 100,
+            //         height: 100,
+            //         decoration: BoxDecoration(
+            //           border: Border.all(color: Colors.grey),
+            //           borderRadius: BorderRadius.circular(8),
+            //         ),
+            //         child: const Icon(Icons.add_a_photo),
+            //       ),
+            //     )
+            //   ],
+            // ),
+          ],
         ),
       ),
     );

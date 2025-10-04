@@ -21,11 +21,15 @@ class _NearbyPromotionPageState extends State<NearbyPromotionPage> {
   List<dynamic> datas = [];
   List<dynamic> selectedBusinesses = [];
   bool isLoading = false;
-  bool showResults = false;
-  bool clrBtn = false;
 
   final int maxSelection = 10;
   final int maxLength = 290;
+
+  final Map<String, String> prefixMap = {
+    'Gents': 'Mr.',
+    'Ladies': 'Ms.',
+    'Firms': 'M/s.',
+  };
 
   @override
   void dispose() {
@@ -34,68 +38,17 @@ class _NearbyPromotionPageState extends State<NearbyPromotionPage> {
     super.dispose();
   }
 
-  Future<void> fetchBusinesses() async {
-    final pincode = _pincodeController.text.trim();
-    final prefix = selectedPrefix;
-
-    if (pincode.isEmpty || prefix == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Enter pincode & select prefix')));
-      return;
-    }
-
-    setState(() => isLoading = true);
-
-    try {
-      // Supabase query
-      final response = await SupabaseService.client
-          .from('profiles')
-          .select()
-          .or('pincode.eq.$pincode,business_prefix.eq.$prefix,person_prefix.eq.$prefix');
-
-      // Await the builder to get data
-      final data = await response;
-
-      if (data == null || (data as List).isEmpty) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('No records found')));
-        setState(() {
-          datas = [];
-          showResults = false;
-        });
-      } else {
-        setState(() {
-          datas = data;
-          showResults = true;
-          clrBtn = true;
-          selectedBusinesses = [];
-        });
-      }
-    } catch (e) {
-      debugPrint('Fetch error: $e');
-      setState(() => isLoading = false);
-    } finally {
-      setState(() => isLoading = false);
-    }
-  }
-
-
-  void clearFilters() {
-    _pincodeController.clear();
-    selectedPrefix = null;
-    datas = [];
-    selectedBusinesses = [];
-    clrBtn = false;
-    showResults = false;
-    setState(() {});
-  }
-
+  /// ✅ Toggle selection by mobile_number
   void toggleSelection(dynamic item) {
-    final isSelected =
-    selectedBusinesses.any((i) => i['id'] == item['id']);
+    final isSelected = selectedBusinesses.any(
+          (i) => i['mobile_number'] == item['mobile_number'],
+    );
+
     if (isSelected) {
       setState(() {
-        selectedBusinesses.removeWhere((i) => i['id'] == item['id']);
+        selectedBusinesses.removeWhere(
+              (i) => i['mobile_number'] == item['mobile_number'],
+        );
       });
     } else {
       if (selectedBusinesses.length < maxSelection) {
@@ -104,24 +57,27 @@ class _NearbyPromotionPageState extends State<NearbyPromotionPage> {
         });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Maximum 10 recipients allowed')));
+          const SnackBar(content: Text('Maximum 10 recipients allowed')),
+        );
       }
     }
   }
 
+  /// ✅ Send SMS to selected numbers
   void sendSMSBatch() async {
     if (selectedBusinesses.isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('No clients selected')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No clients selected')),
+      );
       return;
     }
 
-    final numbers = selectedBusinesses
-        .map((e) => e['mobile_number'].toString())
-        .join(',');
+    final numbers =
+    selectedBusinesses.map((e) => e['mobile_number'].toString()).join(',');
 
-    final smsUri =
-    Uri.parse('sms:$numbers?body=${Uri.encodeComponent(_customMessageController.text)}');
+    final smsUri = Uri.parse(
+      'sms:$numbers?body=${Uri.encodeComponent(_customMessageController.text)}',
+    );
 
     if (await canLaunchUrl(smsUri)) {
       await launchUrl(smsUri);
@@ -130,8 +86,158 @@ class _NearbyPromotionPageState extends State<NearbyPromotionPage> {
       _customMessageController.text =
       'I Saw Your Listing in SIGNPOST PHONE BOOK. I am Interested in your Products. Please Send Details/Call Me. (Sent Through Signpost PHONE BOOK)';
     } else {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Cannot launch SMS app')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cannot launch SMS app')),
+      );
+    }
+  }
+
+  /// ✅ Clear filters & selections
+  void clearFilters() {
+    _pincodeController.clear();
+    selectedPrefix = null;
+    datas = [];
+    selectedBusinesses = [];
+    setState(() {});
+  }
+
+  /// ✅ Fetch businesses from Supabase
+  Future<void> fetchBusinesses() async {
+    final pincode = _pincodeController.text.trim();
+    final prefix = selectedPrefix;
+
+    if (pincode.isEmpty || prefix == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter pincode & select prefix')),
+      );
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    try {
+      final response = await SupabaseService.client
+          .from('profiles')
+          .select()
+          .or(
+          'pincode.eq.$pincode,business_prefix.eq.$prefix,person_prefix.eq.$prefix');
+
+      final data = await response;
+
+      if (data == null || (data as List).isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No records found')),
+        );
+      } else {
+        datas = data;
+        selectedBusinesses = [];
+
+        // ✅ Show results in modal bottom sheet
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.white,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          builder: (context) {
+            return StatefulBuilder(
+              builder: (context, setModalState) {
+                return SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.8,
+                  child: Column(
+                    children: [
+                      // Top info
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Text(
+                          'Results: ${datas.length}, Selected: ${selectedBusinesses.length}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      // Scrollable list
+                      Expanded(
+                        child: ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: datas.length,
+                          itemBuilder: (context, index) {
+                            final item = datas[index];
+                            final isSelected = selectedBusinesses.any(
+                                  (i) =>
+                              i['mobile_number'] == item['mobile_number'],
+                            );
+                            final name = item['business_name'] ??
+                                item['person_name'] ??
+                                'No Name';
+                            final mobile = item['mobile_number'] ?? '';
+
+                            return Card(
+                              color: isSelected
+                                  ? Colors.blue.shade100
+                                  : Colors.white,
+                              child: ListTile(
+                                onTap: () {
+                                  toggleSelection(item);
+                                  setModalState(() {}); // refresh bottom sheet
+                                },
+                                title: Text(name),
+                                subtitle: Text(
+                                  mobile.length > 5
+                                      ? mobile.substring(
+                                      0, mobile.length - 5) +
+                                      'XXXXX'
+                                      : mobile,
+                                ),
+                                trailing: Checkbox(
+                                  value: isSelected,
+                                  onChanged: (_) {
+                                    toggleSelection(item);
+                                    setModalState(() {});
+                                  },
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      // Bottom buttons
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            ElevatedButton(
+                              onPressed: selectedBusinesses.isEmpty
+                                  ? null
+                                  : sendSMSBatch,
+                              child: const Text('Send SMS'),
+                            ),
+                            ElevatedButton(
+                              onPressed: () {
+                                clearFilters();
+                                Navigator.pop(context);
+                              },
+                              child: const Text('Clear'),
+                            ),
+                            ElevatedButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Close'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      }
+    } catch (e) {
+      debugPrint('Fetch error: $e');
+    } finally {
+      setState(() => isLoading = false);
     }
   }
 
@@ -139,8 +245,8 @@ class _NearbyPromotionPageState extends State<NearbyPromotionPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Nearby Promotion')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             // Message input
@@ -149,19 +255,23 @@ class _NearbyPromotionPageState extends State<NearbyPromotionPage> {
               maxLength: maxLength,
               maxLines: 3,
               decoration: const InputDecoration(
-                  labelText: 'Edit/Create Message', border: OutlineInputBorder()),
+                labelText: 'Edit/Create Message',
+                border: OutlineInputBorder(),
+              ),
             ),
             const SizedBox(height: 12),
 
             // Prefix selection
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: ['Mr.', 'Ms.', 'M/s.'].map((p) {
-                final isSelected = selectedPrefix == p;
+              children: prefixMap.keys.map((label) {
+                final backendValue = prefixMap[label]!;
+                final isSelected = selectedPrefix == backendValue;
                 return ChoiceChip(
-                  label: Text(p),
+                  label: Text(label),
                   selected: isSelected,
-                  onSelected: (_) => setState(() => selectedPrefix = p),
+                  onSelected: (_) =>
+                      setState(() => selectedPrefix = backendValue),
                 );
               }).toList(),
             ),
@@ -173,71 +283,23 @@ class _NearbyPromotionPageState extends State<NearbyPromotionPage> {
               keyboardType: TextInputType.number,
               maxLength: 6,
               decoration: const InputDecoration(
-                  labelText: 'Enter Pincode', border: OutlineInputBorder()),
-            ),
-            const SizedBox(height: 12),
-
-            // Search / Clear button
-            ElevatedButton(
-              onPressed: clrBtn ? clearFilters : fetchBusinesses,
-              child: Text(clrBtn ? 'Clear' : 'Search'),
-            ),
-            const SizedBox(height: 12),
-
-
-            if (isLoading) const CircularProgressIndicator(),
-
-            if (showResults)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Top Send SMS button
-                  ElevatedButton(
-                    onPressed: selectedBusinesses.isEmpty ? null : sendSMSBatch,
-                    child: const Text('Send SMS'),
-                  ),
-                  const SizedBox(height: 8),
-                  Text('Results: ${datas.length}, Selected: ${selectedBusinesses.length}'),
-                  const SizedBox(height: 8),
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: datas.length,
-                    itemBuilder: (context, index) {
-                      final item = datas[index];
-                      final isSelected = selectedBusinesses.any((i) => i['id'] == item['id']);
-                      final name = item['business_name'] ?? item['person_name'] ?? 'No Name';
-                      final mobile = item['mobile_number'] ?? '';
-                      return Card(
-                        color: isSelected ? Colors.blue.shade100 : Colors.white,
-                        child: ListTile(
-                          onTap: () => toggleSelection(item),
-                          title: Text(name),
-                          subtitle: Text(
-                            mobile.length > 5
-                                ? mobile.substring(0, mobile.length - 5) + 'XXXXX'
-                                : mobile,
-                          ),
-                          trailing: Checkbox(
-                            value: isSelected,
-                            onChanged: (_) => toggleSelection(item),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  // Bottom Send SMS button (existing)
-                  ElevatedButton(
-                      onPressed:
-                      selectedBusinesses.isEmpty ? null : sendSMSBatch,
-                      child: const Text('Send SMS')),
-                ],
+                labelText: 'Enter Pincode',
+                border: OutlineInputBorder(),
               ),
+            ),
+            const SizedBox(height: 12),
 
+            // Search button
+            ElevatedButton(
+              onPressed: fetchBusinesses,
+              child: const Text('Search'),
+            ),
+            const SizedBox(height: 12),
+            if (isLoading) const CircularProgressIndicator(),
           ],
         ),
       ),
     );
   }
 }
+

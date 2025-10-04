@@ -56,11 +56,17 @@ class _SigninPageState extends State<SigninPage> {
           );
         }
       } else {
-        // ✅ Found → store values in local storage
-        final username =
-            profile["business_name"] ?? profile["person_name"] ?? "";
-        final userId = profile["id"];
+        // ✅ Found → resolve name preference
+        final business = (profile["business_name"] as String?)?.trim();
+        final person = (profile["person_name"] as String?)?.trim();
 
+        final username = (business != null && business.isNotEmpty)
+            ? business
+            : (person ?? "");
+
+        final userId = profile["id"].toString();
+
+        // Save to local storage
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString("username", username);
         await prefs.setString("userId", userId);
@@ -76,12 +82,14 @@ class _SigninPageState extends State<SigninPage> {
         }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: $e")),
+        );
+      }
     }
 
-    setState(() => _isLoading = false);
+    if (mounted) setState(() => _isLoading = false);
   }
 
   String? validateMobile(String? value) {

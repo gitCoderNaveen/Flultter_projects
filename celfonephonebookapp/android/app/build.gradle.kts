@@ -17,7 +17,7 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.example.celfonephonebookapp"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 35
     ndkVersion = "27.1.12297006"
 
     compileOptions {
@@ -44,9 +44,9 @@ android {
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 24
-        targetSdk = 34
-        versionCode = 12
-        versionName = "3.4.2"
+        targetSdk = 35
+        versionCode = 15
+        versionName = "3.4.6"
     }
 
     buildTypes {

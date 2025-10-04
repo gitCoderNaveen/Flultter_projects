@@ -1,7 +1,11 @@
+import 'package:celfonephonebookapp/screens/media_partner_signup.dart';
+import 'package:celfonephonebookapp/screens/optionMenuPage.dart';
+import 'package:celfonephonebookapp/supabase/supabase.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:celfonephonebookapp/screens/admin_panel_page.dart';
-import 'package:celfonephonebookapp/screens/profile_page.dart';
+import 'package:celfonephonebookapp/screens/profile_settings_page.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import './signup.dart';
 import './signin.dart';
 import 'homepage_shell.dart';
@@ -17,23 +21,51 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   String? displayName;
   bool _isLoading = true;
-
+  bool isAdmin = false;
+  bool isSignedIn = false;
   @override
   void initState() {
     super.initState();
     _loadUserProfile();
+    _checkAdmin();
   }
 
   Future<void> _loadUserProfile() async {
     setState(() => _isLoading = true);
     final prefs = await SharedPreferences.getInstance();
     final cachedUserName = prefs.getString('username');
+    final userId = prefs.getString('userId');
     setState(() {
       displayName = cachedUserName;
       _isLoading = false;
     });
   }
 
+  Future<void> _checkAdmin() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString('userId');
+
+
+    if (userId != null) {
+      isSignedIn = true;
+      final response = await SupabaseService.client
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', userId)
+          .single();
+
+      if (response != null && response['is_admin'] == true) {
+        setState(() {
+          isAdmin = true;
+        });
+      }
+    } else {
+      setState(() {
+        isSignedIn = false;
+        isAdmin = false;
+      });
+    }
+  }
   Future<void> _logout(BuildContext context) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -160,6 +192,22 @@ class _SettingsPageState extends State<SettingsPage> {
               },
             ),
           ),
+          if (isSignedIn)
+            Card(
+              child: ListTile(
+                title: const Text("Media Partner"),
+                subtitle: const Text("Earn Plenty with your Data"),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const OptionMenuPage(), // <- add your page here
+                    ),
+                  );
+                },
+              ),
+            ),
 
           // ADMIN PANEL
           Card(
@@ -167,40 +215,20 @@ class _SettingsPageState extends State<SettingsPage> {
               title: const Text("Admin Panel"),
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
               subtitle: const Text("Access advanced admin features"),
-              onTap: () {
-                if (isSignedIn) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const AdminPanelPage(),
-                    ),
-                  );
-                } else {
-                  showDialog(
-                    context: context,
-                    builder: (_) => AlertDialog(
-                      title: const Text("Need to Login"),
-                      content: const Text(
-                          "You must log in to access the Admin Panel."),
-                      actions: [
-                        TextButton(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => const SigninPage()),
-                            );
-                          },
-                          child: const Text("Login"),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-              },
+              onTap: isAdmin
+                  ? () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AdminPanelPage(),
+                  ),
+                );
+              }
+                  : null, // disable tap if not admin
+              enabled: isAdmin, // makes it look disabled
             ),
           ),
+
 
           // NOTIFICATION SETTINGS
           Card(

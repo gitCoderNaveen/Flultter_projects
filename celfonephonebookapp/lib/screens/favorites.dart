@@ -1,6 +1,6 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class FavoritesPage extends StatefulWidget {
@@ -11,73 +11,99 @@ class FavoritesPage extends StatefulWidget {
 }
 
 class _FavoritesPageState extends State<FavoritesPage> {
-  Map<String, List<Map<String, dynamic>>> favorites = {};
-  Map<String, Set<int>> selected = {}; // track selected indexes per category
-  TextEditingController smsController = TextEditingController();
+  final TextEditingController _messageController = TextEditingController();
+  int _remainingChars = 160;
+
+  List<dynamic> groups = [];
+  String? selectedGroupId;
+
+  List<dynamic> members = [];
+  Set<String> selectedMembers = {}; // store mobile numbers
+
+  bool isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _loadFavorites();
-  }
-
-  Future<void> _loadFavorites() async {
-    final prefs = await SharedPreferences.getInstance();
-    final categories = ["Suppliers", "Buyers", "Friends & Family", "Others"];
-    Map<String, List<Map<String, dynamic>>> data = {};
-
-    for (var cat in categories) {
-      List<String> stored = prefs.getStringList("favorites_$cat") ?? [];
-      data[cat] = stored.map((e) => jsonDecode(e) as Map<String, dynamic>).toList();
-    }
-
-    setState(() {
-      favorites = data;
-      selected = {for (var cat in categories) cat: {}};
+    _loadGroups();
+    _messageController.addListener(() {
+      setState(() {
+        _remainingChars = 160 - _messageController.text.length;
+      });
     });
   }
 
-  Future<void> _saveFavorites() async {
+  /// Load favorite groups for logged-in user
+  Future<void> _loadGroups() async {
     final prefs = await SharedPreferences.getInstance();
-    for (var entry in favorites.entries) {
-      List<String> encoded = entry.value.map((e) => jsonEncode(e)).toList();
-      await prefs.setStringList("favorites_${entry.key}", encoded);
+    final userId = prefs.getString("userId");
+
+    if (userId == null) return;
+
+    try {
+      setState(() => isLoading = true);
+      final result = await Supabase.instance.client
+          .from('favorites_groups')
+          .select()
+          .eq('user_id', userId);
+
+      setState(() {
+        groups = result as List<dynamic>;
+      });
+    } catch (e) {
+      debugPrint("Error fetching groups: $e");
+    } finally {
+      setState(() => isLoading = false);
     }
   }
 
-  void _deleteSelected() {
-    setState(() {
-      for (var entry in selected.entries) {
-        final category = entry.key;
-        final indexes = entry.value.toList()..sort((a, b) => b.compareTo(a)); // delete backwards
-        for (var i in indexes) {
-          favorites[category]?.removeAt(i);
-        }
-        selected[category]?.clear();
-      }
-    });
-    _saveFavorites();
+  /// Load members for selected group
+  Future<void> _loadMembers(String groupId) async {
+    try {
+      setState(() => isLoading = true);
+      final result = await Supabase.instance.client
+          .from('group_members')
+          .select()
+          .eq('group_id', groupId);
+
+      setState(() {
+        members = result as List<dynamic>;
+        selectedMembers.clear();
+      });
+    } catch (e) {
+      debugPrint("Error fetching members: $e");
+    } finally {
+      setState(() => isLoading = false);
+    }
   }
 
+  /// Mask mobile number
+  String _maskMobile(String mobile) {
+    if (mobile.length < 5) return mobile;
+    return "${mobile.substring(0, 5)} XXXXX";
+  }
+
+  /// Send SMS to selected members
   Future<void> _sendSMS() async {
-    List<String> numbers = [];
-    for (var entry in selected.entries) {
-      final category = entry.key;
-      for (var i in entry.value) {
-        final contact = favorites[category]?[i];
-        if (contact != null && contact["mobile_number"] != null) {
-          numbers.add(contact["mobile_number"]);
-        }
-      }
+    if (_messageController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Message cannot be empty")),
+      );
+      return;
     }
-    if (numbers.isEmpty) return;
 
-    final message = Uri.encodeComponent(smsController.text.trim());
-    final recipients = numbers.join(",");
-    final smsUri = Uri.parse("sms:$recipients?body=$message");
+    if (selectedMembers.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please select at least one member")),
+      );
+      return;
+    }
 
-    if (await canLaunchUrl(smsUri)) {
-      await launchUrl(smsUri);
+    final numbers = selectedMembers.join(",");
+    final uri = Uri.parse("sms:$numbers?body=${Uri.encodeComponent(_messageController.text)}");
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Could not launch SMS app")),
@@ -85,92 +111,133 @@ class _FavoritesPageState extends State<FavoritesPage> {
     }
   }
 
-  String _maskMobile(String? number) {
-    if (number == null || number.length < 5) return number ?? "";
-    final visible = number.substring(0, number.length - 5);
-    return "${visible}XXXXX";
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Favorites"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.delete),
-            onPressed: _deleteSelected,
-          ),
-        ],
+        centerTitle: true,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
+        elevation: 1,
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView(
-              children: favorites.entries.map((entry) {
-                return ExpansionTile(
-                  title: Text(entry.key),
-                  children: entry.value.asMap().entries.map((item) {
-                    final index = item.key;
-                    final data = item.value;
-                    final isSelected = selected[entry.key]?.contains(index) ?? false;
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            // Top message input
+            TextField(
+              controller: _messageController,
+              maxLength: 160,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: "Type your message...",
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                counterText: "$_remainingChars characters left",
+              ),
+            ),
+            const SizedBox(height: 16),
 
-                    return ListTile(
-                      leading: Checkbox(
-                        value: isSelected,
-                        onChanged: (val) {
+            // Groups list
+            Expanded(
+              child: ListView(
+                children: [
+                  const Text(
+                    "Select Group",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  ...groups.map((group) {
+                    final groupId = group['id'].toString();
+                    return CheckboxListTile(
+                      title: Text(group['group_name'] ?? "Unnamed Group"),
+                      value: selectedGroupId == groupId,
+                      onChanged: (val) {
+                        if (val == true) {
                           setState(() {
-                            if (val == true) {
-                              selected[entry.key]?.add(index);
-                            } else {
-                              selected[entry.key]?.remove(index);
-                            }
+                            selectedGroupId = groupId;
                           });
-                        },
-                      ),
-                        title: Text(
-                          (data["business_name"] != null && data["business_name"].toString().isNotEmpty)
-                              ? data["business_name"]
-                              : (data["person_name"] ?? ""),
-                        ),
-                        subtitle: Text(_maskMobile(data["mobile_number"])),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () {
-                            setState(() {
-                              favorites[entry.key]?.removeAt(index);
-                            });
-                            _saveFavorites();
-                          },
-                        ),
+                          _loadMembers(groupId);
+                        } else {
+                          setState(() {
+                            selectedGroupId = null;
+                            members.clear();
+                          });
+                        }
+                      },
                     );
                   }).toList(),
-                );
-              }).toList(),
+
+                  const SizedBox(height: 16),
+
+                  // Members list
+                  if (members.isNotEmpty) ...[
+                    const Text(
+                      "Select Members (Max 10)",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    ...members.map((member) {
+                      final mobile = member['mobile_number'] ?? "";
+                      final name = member['member_name'] ?? "Unknown";
+                      final masked = _maskMobile(mobile);
+
+                      return CheckboxListTile(
+                        title: Text("$name ($masked)"),
+                        value: selectedMembers.contains(mobile),
+                        onChanged: (val) {
+                          if (val == true) {
+                            if (selectedMembers.length >= 10) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    "You can select up to 10 members only",
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+                            setState(() {
+                              selectedMembers.add(mobile);
+                            });
+                          } else {
+                            setState(() {
+                              selectedMembers.remove(mobile);
+                            });
+                          }
+                        },
+                      );
+                    }).toList(),
+                  ],
+                ],
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              children: [
-                TextField(
-                  controller: smsController,
-                  decoration: const InputDecoration(
-                    hintText: "Enter SMS message",
-                    border: OutlineInputBorder(),
+
+            // Send SMS button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _sendSMS,
+                icon: const Icon(Icons.sms),
+                label: const Text("Send SMS"),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  maxLines: 2,
                 ),
-                const SizedBox(height: 8),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.send),
-                  label: const Text("Send SMS"),
-                  onPressed: _sendSMS,
-                ),
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
