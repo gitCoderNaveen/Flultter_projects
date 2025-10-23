@@ -16,6 +16,30 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
+// 🔹 Category Model
+class CategoryItem {
+  final String title;
+  final String image;
+  final String imageTitle;
+  final String keywords;
+
+  CategoryItem({
+    required this.title,
+    required this.image,
+    required this.imageTitle,
+    required this.keywords,
+  });
+
+  factory CategoryItem.fromMap(Map<String, dynamic> map) {
+    return CategoryItem(
+      title: map['group_title'] ?? '',
+      image: map['image'] ?? '',
+      imageTitle: map['image_title'] ?? '',
+      keywords: map['image_keywords'] ?? '',
+    );
+  }
+}
+
 class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
   String? username;
   String? userId;
@@ -27,14 +51,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   int currentIndex = 0;
 
   // 🔹 Categories
-  final List<Map<String, String>> categories = [
-    {"title": "Suppliers", "icon": "🛠️"},
-    {"title": "Textiles", "icon": "🧵"},
-    {"title": "Spinning", "icon": "🌀"},
-    {"title": "Furniture", "icon": "🪑"},
-    {"title": "Foundary", "icon": "🏭"},
-    {"title": "Machinery", "icon": "⚙️"},
-  ];
+  List<CategoryItem> categoriesFromBackend = [];
+  bool isCategoriesLoading = true;
 
   // 🔹 A–Z Letters
   final List<String> letters = List.generate(26, (index) => String.fromCharCode(65 + index));
@@ -44,6 +62,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     super.initState();
     _loadCachedUserData();
     _loadBanners();
+    _loadCategories();
   }
 
   Future<void> _loadCachedUserData() async {
@@ -104,6 +123,21 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     }
   }
 
+  Future<void> _loadCategories() async {
+    try {
+      final response = await supabase.from('tiles_titles').select();
+      final data = (response as List).map((e) => CategoryItem.fromMap(e)).toList();
+
+      setState(() {
+        categoriesFromBackend = data;
+        isCategoriesLoading = false;
+      });
+    } catch (e) {
+      debugPrint("Error fetching categories: $e");
+      setState(() => isCategoriesLoading = false);
+    }
+  }
+
   String _getFestivalAnimation(String festival) {
     switch (festival.toLowerCase()) {
       case "diwali":
@@ -125,6 +159,101 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       ),
     );
   }
+
+  // 🔹 Quick Search Grid Widget
+  Widget _buildQuickSearch() {
+    if (isCategoriesLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: categoriesFromBackend.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 1, // 👈 one full-width tile per row
+        mainAxisSpacing: 12,
+        childAspectRatio: 5, // 👈 adjust height (4–6 works well)
+      ),
+      itemBuilder: (context, index) {
+        final category = categoriesFromBackend[index];
+
+        return GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => SearchPage(category: category.keywords),
+              ),
+            );
+          },
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.blueAccent.shade100.withOpacity(0.4)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 5,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                // Left side image
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: category.image.isNotEmpty
+                      ? Image.network(
+                    category.image,
+                    height: 50,
+                    width: 50,
+                    fit: BoxFit.cover,
+                  )
+                      : Container(
+                    height: 50,
+                    width: 50,
+                    color: Colors.blue[50],
+                    child: const Icon(
+                      Icons.category,
+                      color: Colors.blueAccent,
+                      size: 28,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 14),
+
+                // Right side text
+                Expanded(
+                  child: Text(
+                    category.title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+
+                // Optional forward arrow
+                const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 16,
+                  color: Colors.grey,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -159,7 +288,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           // 🔹 Top Banner with Festival Animation
           SliverToBoxAdapter(
             child: SizedBox(
-              height: 250,
+              height: 100,
               child: Stack(
                 children: [
                   if (isLoading)
@@ -170,7 +299,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                     CarouselSlider.builder(
                       itemCount: banners.length,
                       options: CarouselOptions(
-                        height: 250,
+                        height: 100,
                         autoPlay: true,
                         enlargeCenterPage: true,
                         viewportFraction: 0.9,
@@ -193,7 +322,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                       },
                     ),
 
-                  // 🎉 Festival Animation Overlay
                   if (banners.isNotEmpty)
                     Positioned.fill(
                       child: IgnorePointer(
@@ -214,16 +342,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           SliverList(
             delegate: SliverChildListDelegate([
               const SizedBox(height: 16),
-
-              const CarouselWidget(
-                images: [
-                  "assets/images/images1.png",
-                  "assets/images/images2.png",
-                  "assets/images/images3.png",
-                ],
-              ),
-
-              const SizedBox(height: 24),
 
               // A-Z Horizontal Scroll
               SizedBox(
@@ -249,7 +367,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                             context,
                             MaterialPageRoute(
                               builder: (_) => SearchPage(
-                                selectedLetter: letter, // 🔹 Pass only the letter
+                                selectedLetter: letter,
                               ),
                             ),
                           );
@@ -267,66 +385,41 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                   },
                 ),
               ),
-
               const SizedBox(height: 24),
 
-              // Quick Search
+              const CarouselWidget(
+                images: [
+                  "assets/images/images1.png",
+                  "assets/images/images2.png",
+                  "assets/images/images3.png",
+                ],
+              ),
+              const SizedBox(height: 24),
+
+
+              // 🔹 Quick Search Section
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "Quick Search",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                child: SizedBox(
+                  width: double.infinity, // ✅ makes it 100% width
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Fast Find",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: categories.length,
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        childAspectRatio: 1,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
+                      SizedBox(
+                        width: double.infinity, // 👈 inner 100%
+                        child: _buildQuickSearch(),
                       ),
-                      itemBuilder: (context, index) {
-                        final category = categories[index];
-                        return GestureDetector(
-                          onTap: () => _goToSearch(context, category: category["title"]),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.blue[50],
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Colors.blueAccent.shade100),
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(category["icon"]!, style: const TextStyle(fontSize: 24)),
-                                const SizedBox(height: 6),
-                                Text(
-                                  category["title"]!,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-
               const SizedBox(height: 24),
 
               // Play Book

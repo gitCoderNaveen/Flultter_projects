@@ -36,8 +36,16 @@ class _SearchPageState extends State<SearchPage> {
   void initState() {
     super.initState();
 
+    // Check if a category is passed
+    if (widget.category != null && widget.category!.isNotEmpty) {
+      // Fill the keywords controller with the category
+      _keywordsController.text = widget.category!;
+
+      // Perform automatic search using name (instead of keywords)
+      _performCategorySearch(widget.category!);
+    }
     // Case 1: Pre-fetched companies from HomePage
-    if (widget.filteredCompanies != null &&
+    else if (widget.filteredCompanies != null &&
         widget.filteredCompanies!.isNotEmpty) {
       searchResults = widget.filteredCompanies!;
     }
@@ -51,6 +59,26 @@ class _SearchPageState extends State<SearchPage> {
     // Case 3: Default → fetch all
     else {
       _fetchAllCompanies();
+    }
+  }
+
+  Future<Map<String, List<String>>> fetchRelatedTerms() async {
+    try {
+      final response = await SupabaseService.client
+          .from('related_terms')
+          .select('category, related_keywords');
+
+      final Map<String, List<String>> relatedTerms = {};
+      for (var row in response) {
+        final String category = row['category'].toString().toLowerCase();
+        final List<dynamic> keywords = row['related_keywords'] ?? [];
+        relatedTerms[category] =
+            keywords.map((e) => e.toString().toLowerCase()).toList();
+      }
+      return relatedTerms;
+    } catch (e) {
+      debugPrint("Error fetching related terms: $e");
+      return {};
     }
   }
 
@@ -160,6 +188,56 @@ class _SearchPageState extends State<SearchPage> {
       setState(() => isLoading = false);
     }
   }
+
+  /// Enhanced category-based search — matches related terms like gold, jewel, diamond
+  Future<void> _performCategorySearch(String category) async {
+    setState(() => isLoading = true);
+
+    try {
+      // Fetch related terms dynamically from Supabase
+      final Map<String, List<String>> relatedTerms = await fetchRelatedTerms();
+
+      // Determine related keywords for given category
+      final lowerCategory = category.toLowerCase();
+      final List<String> searchTerms = relatedTerms.entries
+          .where((e) => lowerCategory.contains(e.key))
+          .expand((e) => e.value)
+          .toList();
+
+      // Default fallback
+      if (searchTerms.isEmpty) {
+        searchTerms.add(category);
+      }
+
+      final orConditions = searchTerms
+          .map((term) =>
+      'business_name.ilike.%$term%,person_name.ilike.%$term%,keywords.ilike.%$term%')
+          .join(',');
+
+      final results = await SupabaseService.client
+          .from('profiles')
+          .select()
+          .or(orConditions)
+          .order('is_prime', ascending: false);
+
+      List<dynamic> sorted = (results as List<dynamic>)
+        ..sort((a, b) {
+          if (a['is_prime'] == true && b['is_prime'] != true) return -1;
+          if (b['is_prime'] == true && a['is_prime'] != true) return 1;
+          if (a['priority'] == true && b['priority'] != true) return -1;
+          if (b['priority'] == true && a['priority'] != true) return 1;
+          return 0;
+        });
+
+      setState(() => searchResults = sorted);
+    } catch (e) {
+      debugPrint("Category search error: $e");
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
+
+
 
   Widget keywordHighlight(String text, String query) {
     if (query.isEmpty || !text.toLowerCase().contains(query.toLowerCase())) {
@@ -496,7 +574,7 @@ class _SearchPageState extends State<SearchPage> {
                                       fontWeight: FontWeight.w600,
                                       color: Colors.black87,
                                     ),
-                                     overflow: TextOverflow.ellipsis,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                                 if (tierIcon != null) ...[

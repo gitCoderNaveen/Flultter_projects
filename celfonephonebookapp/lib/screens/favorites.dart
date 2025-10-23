@@ -11,7 +11,10 @@ class FavoritesPage extends StatefulWidget {
 }
 
 class _FavoritesPageState extends State<FavoritesPage> {
-  final TextEditingController _messageController = TextEditingController();
+  final TextEditingController _messageController = TextEditingController(
+    text:
+    "I Saw Your Listing in SIGNPOST PHONE BOOK. I am Interested in your Products. Please Send Details/Call Me. (Sent Through Signpost PHONE BOOK)",
+  );
   int _remainingChars = 160;
 
   List<dynamic> groups = [];
@@ -26,6 +29,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
   void initState() {
     super.initState();
     _loadGroups();
+    _remainingChars = 160 - _messageController.text.length;
     _messageController.addListener(() {
       setState(() {
         _remainingChars = 160 - _messageController.text.length;
@@ -100,7 +104,8 @@ class _FavoritesPageState extends State<FavoritesPage> {
     }
 
     final numbers = selectedMembers.join(",");
-    final uri = Uri.parse("sms:$numbers?body=${Uri.encodeComponent(_messageController.text)}");
+    final uri = Uri.parse(
+        "sms:$numbers?body=${Uri.encodeComponent(_messageController.text)}");
 
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
@@ -126,14 +131,25 @@ class _FavoritesPageState extends State<FavoritesPage> {
           : Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Instruction message
+            const Text(
+              "Based on the firms Shortlisted while browsing, respective groups will be displayed below. Select desired Group to send message",
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 16),
+
             // Top message input
             TextField(
               controller: _messageController,
               maxLength: 160,
               maxLines: 3,
               decoration: InputDecoration(
-                hintText: "Type your message...",
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),

@@ -76,6 +76,7 @@ class _ModelPageState extends State<ModelPage>
     final email = profile["email"];
     final keywords = profile["keywords"];
     final address = profile["address"];
+    final description = profile['description'];
     final city = profile["city"];
     final pincode = profile["pincode"];
     final person_name = profile["person_name"];
@@ -265,6 +266,22 @@ class _ModelPageState extends State<ModelPage>
                       const SizedBox(height: 12),
                     ],
 
+                    //description
+                    if (description.isNotEmpty) ...[
+                      Row(
+                        children: [
+                          const Icon(Icons.note_add, color: Colors.grey),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              description,
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                     /// Address
                     if (address != null || city != null || pincode != null) ...[
                       Row(
