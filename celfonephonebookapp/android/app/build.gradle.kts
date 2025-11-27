@@ -33,7 +33,6 @@ android {
             storePassword = keystoreProperties["storePassword"] as String
         }
     }
-
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_11.toString()
     }
@@ -45,8 +44,8 @@ android {
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 24
         targetSdk = 35
-        versionCode = 17
-        versionName = "4.2.1"
+        versionCode = 19
+        versionName = "4.4.4"
 
     }
 
@@ -54,8 +53,10 @@ android {
         release {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
-//            signingConfig = signingConfigs.getByName("debug")
+//            signingConfig = signingConfigs.getByName("debug"
             signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = false;
+            isShrinkResources = false;
         }
     }
 }
