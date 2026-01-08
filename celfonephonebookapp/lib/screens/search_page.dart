@@ -1148,7 +1148,6 @@
 //
 //   /// new
 
-// search_page.dart - FINAL VERSION → PRIORITY WINS EVERYTHING (No A-Z!)
 import 'package:celfonephonebookapp/screens/modelpage.dart';
 import 'package:celfonephonebookapp/screens/signin.dart';
 import 'package:celfonephonebookapp/supabase/supabase.dart';
@@ -1159,15 +1158,19 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:animations/animations.dart';
 
 class SearchPage extends StatefulWidget {
-  final String? category;
-  final String? selectedLetter;
+  final String? initialFilter;
   final List<dynamic>? filteredCompanies;
+  final bool forceGeneralSearch;
+  final String? subcategoryContext;
 
   const SearchPage({
     super.key,
-    this.category,
-    this.selectedLetter,
+    this.initialFilter,
     this.filteredCompanies,
+    this.forceGeneralSearch = false,
+    this.subcategoryContext,
+    required String category,
+    required String selectedLetter,
   });
 
   @override
@@ -1186,40 +1189,64 @@ class _SearchPageState extends State<SearchPage> {
   @override
   void initState() {
     super.initState();
-    if (widget.category != null && widget.category!.isNotEmpty) {
-      _keywordsController.text = widget.category!;
-      isKeywordsFocused = true;
-      _performCategorySearch(widget.category!);
-    } else if (widget.filteredCompanies != null &&
+
+    final filter = widget.initialFilter?.trim();
+
+    if (widget.filteredCompanies != null &&
         widget.filteredCompanies!.isNotEmpty) {
       searchResults = widget.filteredCompanies!;
       _sortResults();
       setState(() {});
-    } else if (widget.selectedLetter != null &&
-        widget.selectedLetter!.isNotEmpty) {
-      _performSearch(widget.selectedLetter!, searchType: "letter");
-    } else {
-      _fetchAllCompanies();
+      return;
     }
+
+    if (filter == null || filter.isEmpty) {
+      _fetchAllCompanies();
+      return;
+    }
+
+    if (filter.length == 1 && RegExp(r'^[A-Z]$').hasMatch(filter)) {
+      _firmPersonController.clear();
+      _keywordsController.clear();
+      _performSearch(filter, searchType: "letter");
+      return;
+    }
+
+    if (widget.forceGeneralSearch) {
+      _firmPersonController.text = filter;
+      _keywordsController.clear();
+      isFirmPersonFocused = true;
+      isKeywordsFocused = false;
+      _performCategorySearch(filter);
+      return;
+    }
+
+    _keywordsController.text = filter;
+    isKeywordsFocused = true;
+    isFirmPersonFocused = false;
+    _performCategorySearch(filter);
   }
 
   void _sortResults() {
     searchResults.sort((a, b) {
-      final bool isPrimeA = a['is_prime'] == true;
-      final bool isPrimeB = b['is_prime'] == true;
-      final bool priorityA = a['priority'] == true;
-      final bool priorityB = b['priority'] == true;
+      final bool primeA = a['is_prime'] == true;
+      final bool primeB = b['is_prime'] == true;
+      final bool prioA = a['priority'] == true;
+      final bool prioB = b['priority'] == true;
 
-      if (isPrimeA && !isPrimeB) return -1;
-      if (!isPrimeA && isPrimeB) return 1;
-      if (priorityA && !priorityB) return -1;
-      if (!priorityA && priorityB) return 1;
+      if (primeA && !primeB) return -1;
+      if (!primeA && primeB) return 1;
+      if (prioA && !prioB) return -1;
+      if (!prioA && prioB) return 1;
 
-      final subA = (a['subscription'] ?? 'free').toString().toLowerCase();
-      final subB = (b['subscription'] ?? 'free').toString().toLowerCase();
-      if (subA == 'business' && subB != 'business') return -1;
-      if (subB == 'business' && subA != 'business') return 1;
+      final subA = (a['subscription'] ?? '').toString().toLowerCase();
+      final subB = (b['subscription'] ?? '').toString().toLowerCase();
 
+      final order = ['gold', 'business', 'normal_business', 'free'];
+      final indexA = order.indexOf(subA);
+      final indexB = order.indexOf(subB);
+
+      if (indexA != indexB) return indexA.compareTo(indexB);
       return 0;
     });
   }
@@ -1291,7 +1318,7 @@ class _SearchPageState extends State<SearchPage> {
       } else if (searchType == "keywords") {
         request = request.ilike('keywords', '%$query%');
       } else if (searchType == "letter") {
-        request = request.or('business_name.ilike.${query.toUpperCase()}%');
+        request = request.ilike('business_name', '${query.toUpperCase()}%');
       }
       final results = await request.order('is_prime', ascending: false);
 
@@ -1309,18 +1336,64 @@ class _SearchPageState extends State<SearchPage> {
   Future<void> _performCategorySearch(String category) async {
     setState(() => isLoading = true);
     try {
-      final orConditions = category
-          .split(' ')
-          .map(
-            (t) =>
-                'business_name.ilike.%$t%,person_name.ilike.%$t%,keywords.ilike.%$t%',
-          )
-          .join(',');
-      final results = await SupabaseService.client
-          .from('profiles')
-          .select()
-          .or(orConditions)
-          .order('is_prime', ascending: false);
+      final query = category.trim();
+      if (query.isEmpty) {
+        await _fetchAllCompanies();
+        return;
+      }
+
+      var request = SupabaseService.client.from('profiles').select();
+
+      if (widget.subcategoryContext != null) {
+        final context = widget.subcategoryContext!.toLowerCase();
+        String boostConditions = '';
+
+        if (context == 'college') {
+          boostConditions =
+              'keywords.ilike.%college%,keywords.ilike.%institute%,keywords.ilike.%university%,keywords.ilike.%school%,business_name.ilike.%college%,business_name.ilike.%institute%';
+        } else if (context == 'doctor') {
+          boostConditions =
+              'keywords.ilike.%doctor%,keywords.ilike.%clinic%,keywords.ilike.%hospital%,keywords.ilike.%physician%,business_name.ilike.%dr.%,business_name.ilike.%clinic%';
+        } else if (context == 'hospital') {
+          boostConditions =
+              'keywords.ilike.%hospital%,keywords.ilike.%clinic%,keywords.ilike.%medical centre%,business_name.ilike.%hospital%';
+        } else if (context == 'hotel') {
+          boostConditions =
+              'keywords.ilike.%hotel%,keywords.ilike.%resort%,keywords.ilike.%lodge%,business_name.ilike.%hotel%,business_name.ilike.%resort%';
+        } else if (context == 'travel') {
+          boostConditions =
+              'keywords.ilike.%travel%,keywords.ilike.%tours%,keywords.ilike.%cab%,keywords.ilike.%bus%,keywords.ilike.%visa%';
+        } else if (context == 'shop') {
+          boostConditions =
+              'keywords.ilike.%shop%,keywords.ilike.%store%,keywords.ilike.%mart%,keywords.ilike.%super market%';
+        } else if (context == 'parlour') {
+          boostConditions =
+              'keywords.ilike.%parlour%,keywords.ilike.%salon%,keywords.ilike.%spa%,keywords.ilike.%beauty%';
+        }
+
+        if (boostConditions.isNotEmpty) {
+          request = request.or(boostConditions);
+        }
+      }
+
+      request = request.or(
+        'business_name.ilike.%$query%,person_name.ilike.%$query%,keywords.ilike.%$query%',
+      );
+
+      final words = query.split(' ').where((w) => w.length >= 2).toList();
+      if (words.isNotEmpty) {
+        final wordConditions = words
+            .map(
+              (w) =>
+                  'business_name.ilike.%$w%,person_name.ilike.%$w%,keywords.ilike.%$w%',
+            )
+            .join(',');
+        request = request.or(wordConditions);
+      }
+
+      final results = await request
+          .order('is_prime', ascending: false)
+          .order('priority', ascending: false);
 
       setState(() {
         searchResults = results;
@@ -1328,105 +1401,99 @@ class _SearchPageState extends State<SearchPage> {
       });
     } catch (e) {
       debugPrint("Category search error: $e");
+      await _fetchAllCompanies();
     } finally {
       setState(() => isLoading = false);
     }
   }
 
-  Future<void> _makeCall(String mobile) async {
-    final uri = Uri.parse("tel:$mobile");
-    if (await canLaunchUrl(uri)) await launchUrl(uri);
-  }
-
-  void showEnquiryPopup(
-    BuildContext context,
-    String name,
-    String mobileNumber,
-  ) {
+  void showEnquiryPopup(BuildContext context, String name, String mobile) {
     final controller = TextEditingController(
       text:
-          "I Saw Your Listing in SIGNPOST PHONE BOOK. I am Interested in your Products. Please Send Details/Call Me. (Sent Through Signpost PHONE BOOK)",
+          "I Saw Your Listing in SIGNPOST PHONE BOOK. I am Interested in your Products. Please Send Details/Call Me.",
     );
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         title: Text('Enquiry to $name'),
-        content: StatefulBuilder(
-          builder: (context, setState) => Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: controller,
-                maxLength: 160,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Your Message',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: controller,
+              maxLines: 3,
+              maxLength: 160,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Your Message',
+              ),
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              children: [
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.message),
+                  label: const Text("SMS"),
+                  onPressed: () => launchUrl(
+                    Uri.parse(
+                      'sms:$mobile?body=${Uri.encodeComponent(controller.text)}',
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 10,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () => launchUrl(
-                      Uri.parse(
-                        'sms:$mobileNumber?body=${Uri.encodeComponent(controller.text)}',
-                      ),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.call),
+                  label: const Text("Call"),
+                  onPressed: () => launchUrl(Uri.parse('tel:$mobile')),
+                ),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.message_rounded),
+                  label: const Text("WhatsApp"),
+                  onPressed: () => launchUrl(
+                    Uri.parse(
+                      'https://wa.me/$mobile?text=${Uri.encodeComponent(controller.text)}',
                     ),
-                    icon: const Icon(Icons.message),
-                    label: const Text('SMS'),
                   ),
-                  ElevatedButton.icon(
-                    onPressed: () => launchUrl(Uri.parse('tel:$mobileNumber')),
-                    icon: const Icon(Icons.call),
-                    label: const Text('Call'),
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: () => launchUrl(
-                      Uri.parse(
-                        'https://wa.me/$mobileNumber?text=${Uri.encodeComponent(controller.text)}',
-                      ),
-                    ),
-                    icon: const Icon(Icons.message_rounded),
-                    label: const Text('WhatsApp'),
-                  ),
-                ],
-              ),
-            ],
-          ),
+                ),
+              ],
+            ),
+          ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: const Text("Close"),
           ),
         ],
       ),
     );
   }
 
-  String _getKeywordsString(dynamic keywords) {
-    if (keywords == null) return "No products";
-    if (keywords is String) {
-      return keywords
-          .split(',')
-          .map((e) => e.split(':').first.trim())
-          .join(', ');
+  String _getKeywordsString(dynamic k) {
+    if (k == null) return "No products";
+    if (k is String) {
+      return k.split(',').map((e) => e.split(':').first.trim()).join(', ');
     }
-    if (keywords is List) {
-      return keywords
-          .map((e) {
-            if (e is Map) return e['name'] ?? e['title'] ?? "";
-            return e.toString();
-          })
+    if (k is List) {
+      return k
+          .map((e) => e is Map ? (e['name'] ?? e['title'] ?? "") : e.toString())
           .where((e) => e.isNotEmpty)
           .join(', ');
     }
     return "No products";
   }
 
-  Widget _goldTierCard(Map<String, dynamic> item, String name) {
+  // Helper: Truncate name to first 1-2 words + "..."
+  String _trimName(String fullName) {
+    if (fullName.isEmpty) return "User";
+    final words = fullName.trim().split(' ');
+    if (words.length <= 2) return fullName;
+    return '${words[0]} ${words.length > 1 ? words[1] : ''}...'.trim();
+  }
+
+  Widget _goldTierCard(Map<String, dynamic> item, String fullName) {
+    final truncatedName = _trimName(fullName);
     final goldGradient = const LinearGradient(
       colors: [Color(0xFFb87333), Color(0xFFFFD700)],
     );
@@ -1468,14 +1535,14 @@ class _SearchPageState extends State<SearchPage> {
                           child: Row(
                             children: [
                               Text(
-                                name,
+                                truncatedName,
                                 style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w700,
                                   color: Colors.black,
                                 ),
                               ),
-                              const SizedBox(width: 4),
+                              const SizedBox(width: 6),
                               const Icon(
                                 Icons.workspace_premium,
                                 color: Colors.amber,
@@ -1487,7 +1554,21 @@ class _SearchPageState extends State<SearchPage> {
                                 color: Colors.green,
                                 size: 18,
                               ),
+                              const Spacer(),
                             ],
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => _checkLoginAndProceed(
+                            () => launchUrl(Uri.parse("tel:$mobile")),
+                          ),
+                          child: const Padding(
+                            padding: EdgeInsets.only(right: 12),
+                            child: Icon(
+                              Icons.call,
+                              color: Colors.green,
+                              size: 28,
+                            ),
                           ),
                         ),
                         InkWell(
@@ -1501,7 +1582,7 @@ class _SearchPageState extends State<SearchPage> {
                                 ),
                               ),
                               builder: (_) => FavoriteOptionsModal(
-                                name: name,
+                                name: fullName,
                                 mobile: mobile,
                               ),
                             );
@@ -1556,54 +1637,30 @@ class _SearchPageState extends State<SearchPage> {
                   ],
                 ),
                 Positioned(
-                  top: 45,
+                  bottom: 0,
                   right: 0,
-                  child: Row(
-                    children: [
-                      // CALL = ICON ONLY
-                      GestureDetector(
-                        onTap: () =>
-                            _checkLoginAndProceed(() => _makeCall(mobile)),
-                        child: Container(
-                          height: 40,
-                          width: 60,
-                          decoration: BoxDecoration(
-                            gradient: goldGradient,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.call,
+                  child: GestureDetector(
+                    onTap: () => _checkLoginAndProceed(
+                      () => showEnquiryPopup(context, fullName, mobile),
+                    ),
+                    child: Container(
+                      width: 100,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        gradient: goldGradient,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Center(
+                        child: Text(
+                          "Enquire",
+                          style: TextStyle(
                             color: Colors.white,
-                            size: 24,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      // ENQUIRE = TEXT ONLY
-                      GestureDetector(
-                        onTap: () => _checkLoginAndProceed(
-                          () => showEnquiryPopup(context, name, mobile),
-                        ),
-                        child: Container(
-                          height: 40,
-                          width: 100,
-                          decoration: BoxDecoration(
-                            gradient: goldGradient,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Center(
-                            child: Text(
-                              "Enquire",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ],
@@ -1624,7 +1681,10 @@ class _SearchPageState extends State<SearchPage> {
         elevation: 0,
         centerTitle: true,
         title: Text(
-          widget.category ?? widget.selectedLetter ?? "Search Page",
+          widget.initialFilter?.length == 1 &&
+                  RegExp(r'^[A-Z]$').hasMatch(widget.initialFilter!)
+              ? "Starts with ${widget.initialFilter}"
+              : widget.initialFilter ?? "Search Results",
           style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -1737,65 +1797,74 @@ class _SearchPageState extends State<SearchPage> {
                     ),
                   )
                 : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     itemCount: searchResults.length,
                     itemBuilder: (context, index) {
                       final item = searchResults[index];
-                      final currentQuery = isKeywordsFocused
-                          ? _keywordsController.text
-                          : _firmPersonController.text;
-
-                      final String name =
-                          (item['business_name']?.toString().isNotEmpty ==
-                                  true &&
-                              item['business_name']
-                                  .toString()
-                                  .toLowerCase()
-                                  .contains(currentQuery.toLowerCase()))
-                          ? item['business_name']
-                          : (item['person_name']?.toString().isNotEmpty ==
-                                    true &&
-                                item['person_name']
-                                    .toString()
-                                    .toLowerCase()
-                                    .contains(currentQuery.toLowerCase()))
-                          ? item['person_name']
-                          : item['business_name'] ??
-                                item['person_name'] ??
-                                "No Name";
-
-                      final String tier = (item['subscription'] ?? 'free')
+                      final sub = (item['subscription'] ?? '')
                           .toString()
                           .toLowerCase();
-                      final bool isPriority = item['priority'] == true;
-                      final String mobile = item['mobile_number'] ?? "";
-                      final keywordsStr = _getKeywordsString(item['keywords']);
+                      final bool isGold =
+                          item['is_prime'] == true || sub == 'gold';
+                      final String fullName =
+                          item['business_name']?.toString().isNotEmpty == true
+                          ? item['business_name']
+                          : item['person_name'] ?? "User";
+                      final String mobile =
+                          item['mobile_number']?.toString() ?? "";
+                      final String maskedMobile = mobile.length >= 5
+                          ? "${mobile.substring(0, 5)} XXXXX"
+                          : mobile;
+                      final String keywordsStr = _getKeywordsString(
+                        item['keywords'],
+                      );
+                      final String displayText = isKeywordsFocused
+                          ? keywordsStr
+                          : "${item['city'] ?? ''}, ${item['pincode'] ?? ''}";
 
-                      if (item['is_prime'] == true || tier == 'gold') {
+                      if (isGold) {
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: _goldTierCard(item, name),
+                          child: _goldTierCard(item, fullName),
                         );
                       }
 
+                      final String tier = sub == 'business'
+                          ? 'business'
+                          : sub == 'normal_business' || sub == 'normal business'
+                          ? 'normal_business'
+                          : 'free';
+
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: BusinessCard(
-                          name: name,
-                          displayText: isKeywordsFocused
-                              ? keywordsStr
-                              : "${item['city'] ?? ""}, ${item['pincode'] ?? ""}",
+                        child: TieredBusinessCard(
+                          fullName: fullName,
+                          displayText: displayText,
                           displayIcon: isKeywordsFocused
                               ? Icons.inventory_2
                               : Icons.location_on_outlined,
-                          mobile: mobile.length >= 5
-                              ? "${mobile.substring(0, 5)} XXXXX"
-                              : mobile,
+                          mobile: maskedMobile,
                           tier: tier,
-                          priority: isPriority,
-                          item: item,
-                          onFavoriteTap: () => _checkLoginAndProceed(() {
-                            showModalBottomSheet(
+                          priority: item['priority'] == true,
+                          onTap: () => _checkLoginAndProceed(
+                            () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ModelPage(profile: item),
+                              ),
+                            ),
+                          ),
+                          onCall: () => _checkLoginAndProceed(
+                            () => launchUrl(Uri.parse("tel:$mobile")),
+                          ),
+                          onEnquiry: () => _checkLoginAndProceed(
+                            () => showEnquiryPopup(context, fullName, mobile),
+                          ),
+                          onFavorite: () => _checkLoginAndProceed(
+                            () => showModalBottomSheet(
                               context: context,
                               isScrollControlled: true,
                               shape: const RoundedRectangleBorder(
@@ -1804,21 +1873,8 @@ class _SearchPageState extends State<SearchPage> {
                                 ),
                               ),
                               builder: (_) => FavoriteOptionsModal(
-                                name: name,
+                                name: fullName,
                                 mobile: mobile,
-                              ),
-                            );
-                          }),
-                          onCallTap: () =>
-                              _checkLoginAndProceed(() => _makeCall(mobile)),
-                          onEnquiryTap: () => _checkLoginAndProceed(
-                            () => showEnquiryPopup(context, name, mobile),
-                          ),
-                          onCardTap: () => _checkLoginAndProceed(
-                            () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ModelPage(profile: item),
                               ),
                             ),
                           ),
@@ -1833,55 +1889,72 @@ class _SearchPageState extends State<SearchPage> {
   }
 }
 
-class BusinessCard extends StatelessWidget {
-  final String name, displayText, mobile, tier;
+class TieredBusinessCard extends StatelessWidget {
+  final String fullName;
+  final String displayText, mobile, tier;
   final IconData displayIcon;
   final bool priority;
-  final Map<String, dynamic> item;
-  final VoidCallback onFavoriteTap, onCallTap, onEnquiryTap, onCardTap;
+  final VoidCallback onTap, onCall, onEnquiry, onFavorite;
 
-  const BusinessCard({
+  const TieredBusinessCard({
     super.key,
-    required this.name,
+    required this.fullName,
     required this.displayText,
     required this.displayIcon,
     required this.mobile,
     required this.tier,
     required this.priority,
-    required this.item,
-    required this.onFavoriteTap,
-    required this.onCallTap,
-    required this.onEnquiryTap,
-    required this.onCardTap,
+    required this.onTap,
+    required this.onCall,
+    required this.onEnquiry,
+    required this.onFavorite,
   });
+
+  String _trimName(String name) {
+    final words = name.trim().split(' ');
+    if (words.length <= 2) return name;
+    return '${words[0]} ${words.length > 1 ? words[1] : ''}...'.trim();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final bool isBusiness = tier == "business";
-    final Color magenta = const Color(0xFFE91E63);
-    final Color lightMagenta = const Color(0xFFFCE4EC);
+    final truncatedName = _trimName(fullName);
+
+    Color primaryColor;
+    Color buttonColor;
+
+    if (tier == 'business') {
+      primaryColor = const Color(0xFFE91E63);
+      buttonColor = primaryColor;
+    } else if (tier == 'normal_business') {
+      primaryColor = const Color(0xFF8B5CF6);
+      buttonColor = primaryColor;
+    } else {
+      primaryColor = Colors.grey.shade700;
+      buttonColor = Colors.grey.shade700;
+    }
 
     return InkWell(
-      onTap: onCardTap,
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
       child: Container(
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isBusiness ? lightMagenta : Colors.grey.shade100,
+          color: Colors.white,
           border: Border.all(
-            color: isBusiness ? magenta : Colors.grey.shade400,
-            width: isBusiness ? 4.0 : 1.5,
+            color: tier == 'free' ? Colors.grey.shade400 : primaryColor,
+            width: tier == 'free' ? 1.5 : 4.0,
           ),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: const [
             BoxShadow(
               color: Colors.black12,
-              blurRadius: 6,
-              offset: Offset(0, 3),
+              blurRadius: 8,
+              offset: Offset(0, 4),
             ),
           ],
         ),
-        padding: const EdgeInsets.all(14),
         child: Stack(
-          clipBehavior: Clip.none,
           children: [
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1892,62 +1965,78 @@ class BusinessCard extends StatelessWidget {
                       child: Row(
                         children: [
                           Text(
-                            name,
+                            truncatedName,
                             style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: isBusiness
-                                  ? FontWeight.w800
-                                  : FontWeight.w600,
+                              fontSize: 17.5,
+                              fontWeight: tier == 'free'
+                                  ? FontWeight.w600
+                                  : FontWeight.w800,
                               color: Colors.black87,
                             ),
                           ),
-                          if (isBusiness) ...[
-                            const SizedBox(width: 6),
+                          const SizedBox(width: 6),
+                          if (tier != 'free')
                             const Icon(
                               Icons.verified,
                               color: Colors.green,
                               size: 20,
                             ),
-                            const SizedBox(width: 4),
-                            const Text(
-                              "",
-                              style: TextStyle(
-                                color: Colors.green,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                          if (priority) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.orange.shade700,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Text(
-                                "Featured",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
+                          if (priority)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 8),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.shade700,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Text(
+                                  "Featured",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ),
-                          ],
+                          const Spacer(),
                         ],
                       ),
                     ),
+                    GestureDetector(
+                      onTap: onCall,
+                      child: const Padding(
+                        padding: EdgeInsets.only(right: 12),
+                        child: Icon(Icons.call, color: Colors.green, size: 28),
+                      ),
+                    ),
                     InkWell(
-                      onTap: onFavoriteTap,
+                      onTap: onFavorite,
                       child: Icon(
                         Icons.favorite_border,
-                        color: isBusiness ? magenta : Colors.grey.shade700,
+                        color: primaryColor,
                         size: 28,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Icon(displayIcon, size: 16, color: Colors.grey[700]),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        displayText,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.black87,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -1955,85 +2044,42 @@ class BusinessCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Icon(displayIcon, color: Colors.grey, size: 15),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        displayText,
-                        style: const TextStyle(
-                          color: Colors.black87,
-                          fontSize: 14,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Icon(Icons.phone, color: Colors.grey, size: 15),
-                    const SizedBox(width: 6),
+                    const Icon(Icons.phone, size: 16, color: Colors.grey),
+                    const SizedBox(width: 8),
                     Text(
                       mobile,
                       style: const TextStyle(
-                        color: Colors.black87,
                         fontSize: 14,
+                        color: Colors.black87,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
               ],
             ),
             Positioned(
-              top: 50,
+              bottom: 0,
               right: 0,
-              child: Row(
-                children: [
-                  // CALL = ICON ONLY
-                  GestureDetector(
-                    onTap: onCallTap,
-                    child: Container(
-                      height: 42,
-                      width: 62,
-                      decoration: BoxDecoration(
-                        color: isBusiness
-                            ? Colors.green[600]!
-                            : Colors.grey.shade600,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.call,
+              child: GestureDetector(
+                onTap: onEnquiry,
+                child: Container(
+                  width: 100,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: buttonColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      "Enquire",
+                      style: TextStyle(
                         color: Colors.white,
-                        size: 24,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  // ENQUIRE = TEXT ONLY
-                  GestureDetector(
-                    onTap: onEnquiryTap,
-                    child: Container(
-                      height: 42,
-                      width: 105,
-                      decoration: BoxDecoration(
-                        color: isBusiness ? magenta : Colors.grey.shade700,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Center(
-                        child: Text(
-                          "Enquire",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ],
@@ -2051,6 +2097,7 @@ class FavoriteOptionsModal extends StatefulWidget {
     required this.name,
     required this.mobile,
   }) : super(key: key);
+
   @override
   State<FavoriteOptionsModal> createState() => _FavoriteOptionsModalState();
 }
@@ -2077,30 +2124,31 @@ class _FavoriteOptionsModalState extends State<FavoriteOptionsModal> {
         ).showSnackBar(const SnackBar(content: Text("Please log in first")));
         return;
       }
+
       final existingGroups = await SupabaseService.client
           .from("favorites_groups")
           .select()
           .eq("group_name", selectedOption!)
           .eq("user_id", userId);
+
       dynamic groupId;
       if (existingGroups.isNotEmpty) {
         groupId = existingGroups[0]['id'];
       } else {
         final inserted = await SupabaseService.client
             .from("favorites_groups")
-            .insert({
-              "group_name": selectedOption!,
-              "user_id": userId,
-            }) // ← FIXED: was selectedGroup
+            .insert({"group_name": selectedOption!, "user_id": userId})
             .select()
             .single();
         groupId = inserted['id'];
       }
+
       final existingMember = await SupabaseService.client
           .from("group_members")
           .select()
           .eq("group_id", groupId)
           .eq("mobile_number", widget.mobile);
+
       if (existingMember.isNotEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -2119,7 +2167,6 @@ class _FavoriteOptionsModalState extends State<FavoriteOptionsModal> {
         Navigator.pop(context);
       }
     } catch (e) {
-      debugPrint("Error saving favorite: $e");
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text("Error: $e")));
@@ -2141,10 +2188,10 @@ class _FavoriteOptionsModalState extends State<FavoriteOptionsModal> {
           ),
           const SizedBox(height: 12),
           ...options.map(
-            (option) => CheckboxListTile(
-              title: Text(option),
-              value: selectedOption == option,
-              onChanged: (val) => setState(() => selectedOption = option),
+            (o) => CheckboxListTile(
+              title: Text(o),
+              value: selectedOption == o,
+              onChanged: (_) => setState(() => selectedOption = o),
             ),
           ),
           const SizedBox(height: 16),

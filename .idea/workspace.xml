@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="NONE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="cba7af59-d701-402c-a31d-c3278048f16b" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/celfonephonebookapp/android/app/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/celfonephonebookapp/android/app/build.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/celfonephonebookapp/assets/icon/logo.png" beforeDir="false" afterPath="$PROJECT_DIR$/celfonephonebookapp/assets/icon/logo.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/celfonephonebookapp/lib/screens/homepage.dart" beforeDir="false" afterPath="$PROJECT_DIR$/celfonephonebookapp/lib/screens/homepage.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/celfonephonebookapp/lib/screens/media_partner_signup.dart" beforeDir="false" afterPath="$PROJECT_DIR$/celfonephonebookapp/lib/screens/media_partner_signup.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/celfonephonebookapp/lib/screens/modelpage.dart" beforeDir="false" afterPath="$PROJECT_DIR$/celfonephonebookapp/lib/screens/modelpage.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/celfonephonebookapp/lib/screens/profile_settings_page.dart" beforeDir="false" afterPath="$PROJECT_DIR$/celfonephonebookapp/lib/screens/profile_settings_page.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/celfonephonebookapp/lib/screens/search_page.dart" beforeDir="false" afterPath="$PROJECT_DIR$/celfonephonebookapp/lib/screens/search_page.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/celfonephonebookapp/lib/screens/signup.dart" beforeDir="false" afterPath="$PROJECT_DIR$/celfonephonebookapp/lib/screens/signup.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/celfonephonebookapp/pubspec.lock" beforeDir="false" afterPath="$PROJECT_DIR$/celfonephonebookapp/pubspec.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/celfonephonebookapp/pubspec.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/celfonephonebookapp/pubspec.yaml" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ClangdSettings">
+    <option name="formatViaClangd" value="false" />
+  </component>
+  <component name="ExternalProjectsManager">
+    <system id="GRADLE">
+      <state>
+        <projects_view>
+          <tree_state>
+            <expand />
+            <select />
+          </tree_state>
+        </projects_view>
+      </state>
+    </system>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/celfonephonebookapp" />
+    <option name="ROOT_SYNC" value="DONT_SYNC" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 1
+}</component>
+  <component name="ProjectId" id="31GZkjIvrmfPdNBzfoFRs3ifuQl" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Flutter.CelfonPhonebook.executor&quot;: &quot;Run&quot;,
+    &quot;Flutter.Phonebook_app.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.readMode.enableVisualFormatting&quot;: &quot;true&quot;,
+    &quot;android.gradle.sync.needed&quot;: &quot;true&quot;,
+    &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
+    &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
+    &quot;com.google.services.firebase.aqiPopupShown&quot;: &quot;true&quot;,
+    &quot;dart.analysis.tool.window.visible&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;io.flutter.reload.alreadyRun&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;E:/Flutter_Projects/celfonephonebookapp/assets&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;SDK Location&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.17&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;AndroidSdkUpdater&quot;,
+    &quot;show.migrate.to.gradle.popup&quot;: &quot;false&quot;
+  }
+}</component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="E:\Flutter_Projects\celfonephonebookapp\assets" />
+      <recent name="E:\Flutter_Projects\celfonphonebookapp\assets\icon" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Flutter.CelfonPhonebook">
+    <configuration name="CelfonPhonebook" type="FlutterRunConfigurationType" factoryName="Flutter">
+      <option name="filePath" value="$PROJECT_DIR$/celfonephonebookapp/lib/main.dart" />
+      <method v="2" />
+    </configuration>
+    <configuration name="Phonebook_app" type="FlutterRunConfigurationType" factoryName="Flutter">
+      <option name="filePath" value="$PROJECT_DIR$/phonebook/lib/main.dart" />
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Flutter.Phonebook_app" />
+      <item itemvalue="Flutter.CelfonPhonebook" />
+    </list>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="cba7af59-d701-402c-a31d-c3278048f16b" name="Changes" comment="" />
+      <created>1755152515028</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1755152515028</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="Dart">
+          <url>file://$PROJECT_DIR$/phonebookapp/lib/screens/dashboard_screen.dart</url>
+          <line>99</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="Dart">
+          <url>file://$PROJECT_DIR$/phonebookapp/lib/screens/dashboard_screen.dart</url>
+          <line>104</line>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
+</project>

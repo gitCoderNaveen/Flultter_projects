@@ -1,195 +1,9 @@
-// import 'package:flutter/material.dart';
-// import '../supabase/supabase.dart';
-// import 'homepage_shell.dart';
-// import 'package:shared_preferences/shared_preferences.dart';
-// import './signup.dart';
-//
-// class SigninPage extends StatefulWidget {
-//   const SigninPage({super.key});
-//
-//   @override
-//   State<SigninPage> createState() => _SigninPageState();
-// }
-//
-// class _SigninPageState extends State<SigninPage> {
-//   final _formKey = GlobalKey<FormState>();
-//   final mobileController = TextEditingController();
-//   bool _isLoading = false;
-//
-//   Future<void> _signIn() async {
-//     if (!_formKey.currentState!.validate()) return;
-//
-//     setState(() => _isLoading = true);
-//
-//     final mobile = mobileController.text.trim();
-//
-//     try {
-//       // 🔎 Check profiles table
-//       final profile = await SupabaseService.client
-//           .from("profiles")
-//           .select("id, business_name, person_name")
-//           .eq("mobile_number", mobile)
-//           .maybeSingle();
-//
-//       if (profile == null) {
-//         // ❌ Not found → show alert with Signup option
-//         if (mounted) {
-//           await showDialog(
-//             context: context,
-//             builder: (context) => AlertDialog(
-//               title: const Text("Invalid Mobile Number"),
-//               content: const Text(
-//                   "This mobile number is not registered. Please sign up first."),
-//               actions: [
-//                 TextButton(
-//                   onPressed: () {
-//                     Navigator.pop(context);
-//                     Navigator.pushReplacement(
-//                       context,
-//                       MaterialPageRoute(builder: (_) => const SignupPage()),
-//                     );
-//                   },
-//                   child: const Text("Sign Up"),
-//                 ),
-//               ],
-//             ),
-//           );
-//         }
-//       } else {
-//         // ✅ Found → resolve name preference
-//         final business = (profile["business_name"] as String?)?.trim();
-//         final person = (profile["person_name"] as String?)?.trim();
-//
-//         final username = (business != null && business.isNotEmpty)
-//             ? business
-//             : (person ?? "");
-//
-//         final userId = profile["id"].toString();
-//
-//         // Save to local storage
-//         final prefs = await SharedPreferences.getInstance();
-//         await prefs.setString("username", username);
-//         await prefs.setString("userId", userId);
-//
-//         debugPrint("✅ Logged in as $username ($userId)");
-//
-//         if (mounted) {
-//           Navigator.pushAndRemoveUntil(
-//             context,
-//             MaterialPageRoute(builder: (_) => const HomePageShell()),
-//                 (route) => false,
-//           );
-//         }
-//       }
-//     } catch (e) {
-//       if (mounted) {
-//         ScaffoldMessenger.of(context).showSnackBar(
-//           SnackBar(content: Text("Error: $e")),
-//         );
-//       }
-//     }
-//
-//     if (mounted) setState(() => _isLoading = false);
-//   }
-//
-//   String? validateMobile(String? value) {
-//     if (value == null || value.isEmpty) return "Enter mobile number";
-//     if (!RegExp(r'^[6-9]\d{9}$').hasMatch(value)) {
-//       return "Enter valid Indian mobile number";
-//     }
-//     return null;
-//   }
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       backgroundColor: Colors.grey[200],
-//       body: Center(
-//         child: SingleChildScrollView(
-//           padding: const EdgeInsets.all(16),
-//           child: Card(
-//             elevation: 6,
-//             shape: RoundedRectangleBorder(
-//               borderRadius: BorderRadius.circular(16),
-//             ),
-//             child: Padding(
-//               padding: const EdgeInsets.all(20),
-//               child: Form(
-//                 key: _formKey,
-//                 child: Column(
-//                   mainAxisSize: MainAxisSize.min,
-//                   children: [
-//                     const Text(
-//                       "Sign In",
-//                       style: TextStyle(
-//                         fontSize: 24,
-//                         fontWeight: FontWeight.bold,
-//                       ),
-//                     ),
-//                     const SizedBox(height: 20),
-//
-//                     // Mobile Input
-//                     TextFormField(
-//                       controller: mobileController,
-//                       decoration: const InputDecoration(
-//                         labelText: "Mobile Number",
-//                         border: OutlineInputBorder(),
-//                         prefixIcon: Icon(Icons.phone),
-//                       ),
-//                       keyboardType: TextInputType.phone,
-//                       validator: validateMobile,
-//                     ),
-//                     const SizedBox(height: 20),
-//
-//                     // Sign In Button
-//                     SizedBox(
-//                       width: double.infinity,
-//                       child: ElevatedButton(
-//                         onPressed: _isLoading ? null : _signIn,
-//                         style: ElevatedButton.styleFrom(
-//                           padding: const EdgeInsets.symmetric(vertical: 14),
-//                           shape: RoundedRectangleBorder(
-//                             borderRadius: BorderRadius.circular(12),
-//                           ),
-//                         ),
-//                         child: _isLoading
-//                             ? const CircularProgressIndicator(
-//                           color: Colors.white,
-//                         )
-//                             : const Text(
-//                           "Sign In",
-//                           style: TextStyle(fontSize: 16),
-//                         ),
-//                       ),
-//                     ),
-//
-//                     const SizedBox(height: 12),
-//
-//                     // Signup link
-//                     TextButton(
-//                       onPressed: () {
-//                         Navigator.pushReplacement(
-//                           context,
-//                           MaterialPageRoute(builder: (_) => const SignupPage()),
-//                         );
-//                       },
-//                       child: const Text("Create an Account? Sign Up"),
-//                     ),
-//                   ],
-//                 ),
-//               ),
-//             ),
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-// }
 import 'package:flutter/material.dart';
-import '../supabase/supabase.dart';
-import 'homepage_shell.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import './signup.dart';
+import '../supabase/supabase.dart'; // Your custom wrapper
+import 'homepage_shell.dart';
+import 'signup.dart';
 
 class SigninPage extends StatefulWidget {
   const SigninPage({super.key});
@@ -200,113 +14,79 @@ class SigninPage extends StatefulWidget {
 
 class _SigninPageState extends State<SigninPage> {
   final _formKey = GlobalKey<FormState>();
-  final mobileController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  
   bool _isLoading = false;
+  bool _obscurePassword = true;
 
+  // ------------------------------------------------------------------------
+  // ✅ 1. Sign In Logic (Email & Password)
+  // ------------------------------------------------------------------------
   Future<void> _signIn() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
-    final mobile = mobileController.text.trim();
-
     try {
-      // 🔎 Check profiles table
-      final profile = await SupabaseService.client
-          .from("profiles")
-          .select("id, business_name, person_name")
-          .eq("mobile_number", mobile)
-          .maybeSingle();
+      // Step A: Authenticate with Supabase Auth
+      final AuthResponse res = await SupabaseService.client.auth.signInWithPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
 
-      if (profile == null) {
-        // ❌ Not found → show alert with Signup option
-        if (mounted) {
-          await showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text("Invalid Mobile Number"),
-              content: const Text(
-                  "This mobile number is not registered. Please sign up first."),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const SignupPage()),
-                    );
-                  },
-                  child: const Text("Sign Up"),
-                ),
-              ],
-            ),
-          );
+      final user = res.user;
+
+      if (user != null) {
+        // Step B: Fetch profile info from "profiles" table for the UI
+        final profile = await SupabaseService.client
+            .from("profiles")
+            .select("business_name, person_name")
+            .eq("id", user.id)
+            .maybeSingle();
+
+        String username = "User";
+        if (profile != null) {
+          final business = (profile["business_name"] as String?)?.trim();
+          final person = (profile["person_name"] as String?)?.trim();
+          username = (business != null && business.isNotEmpty) ? business : (person ?? "User");
         }
-      } else {
-        // ✅ Found → resolve name preference
-        final business = (profile["business_name"] as String?)?.trim();
-        final person = (profile["person_name"] as String?)?.trim();
 
-        final username = (business != null && business.isNotEmpty)
-            ? business
-            : (person ?? "");
-
-        final userId = profile["id"].toString();
-
-        // 💾 Save to local storage
+        // Step C: Save to SharedPreferences
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString("username", username);
-        await prefs.setString("userId", userId);
-
-        // 🆕 Ensure users_table row exists (insert only if not exists)
-        try {
-          // 1️⃣ Check if record already exists
-          final existing = await SupabaseService.client
-              .from('users_table')
-              .select('id')
-              .eq('user_id', userId)
-              .maybeSingle();
-
-          if (existing == null) {
-            // 2️⃣ Not exists → insert new row
-            await SupabaseService.client.from('users_table').insert({
-              'user_id': userId,
-              'user_name': username,
-              // 'cover_photo': null, // set later from profile/edit screen if needed
-            });
-          }
-        } catch (e) {
-          // Don’t block login if this fails; just log it.
-          debugPrint('Error ensuring users_table row: $e');
-        }
-
-        debugPrint("✅ Logged in as $username ($userId)");
+        await prefs.setString("userId", user.id);
 
         if (mounted) {
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (_) => const HomePageShell()),
-                (route) => false,
+            (route) => false,
           );
         }
       }
+    } on AuthException catch (e) {
+      _showSnackBar(e.message, Colors.red);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: $e")),
-        );
-      }
+      _showSnackBar("An unexpected error occurred", Colors.red);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
-
-    if (mounted) setState(() => _isLoading = false);
   }
 
-  String? validateMobile(String? value) {
-    if (value == null || value.isEmpty) return "Enter mobile number";
-    if (!RegExp(r'^[6-9]\d{9}$').hasMatch(value)) {
-      return "Enter valid Indian mobile number";
-    }
-    return null;
+  void _showSnackBar(String message, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: color),
+    );
+  }
+
+  void _showForgotPasswordSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const ForgotPasswordSheet(),
+    );
   }
 
   @override
@@ -318,71 +98,84 @@ class _SigninPageState extends State<SigninPage> {
           padding: const EdgeInsets.all(16),
           child: Card(
             elevation: 6,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             child: Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(24.0),
               child: Form(
                 key: _formKey,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const Text(
-                      "Sign In",
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      "Welcome Back",
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 20),
-
-                    // Mobile Input
+                    
+                    // Email Field
                     TextFormField(
-                      controller: mobileController,
-                      decoration: const InputDecoration(
-                        labelText: "Mobile Number",
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.phone),
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: InputDecoration(
+                        labelText: "Email Address",
+                        prefixIcon: const Icon(Icons.email_outlined),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      keyboardType: TextInputType.phone,
-                      validator: validateMobile,
+                      validator: (v) => (v == null || !v.contains('@')) ? "Enter valid email" : null,
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 15),
 
-                    // Sign In Button
+                    // Password Field
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
+                      decoration: InputDecoration(
+                        labelText: "Password",
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        suffixIcon: IconButton(
+                          icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+                          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                        ),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      validator: (v) => (v == null || v.isEmpty) ? "Enter password" : null,
+                    ),
+
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: _showForgotPasswordSheet,
+                        child: const Text("Forgot Password?", style: TextStyle(color: Colors.indigo)),
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
                     SizedBox(
                       width: double.infinity,
+                      height: 50,
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _signIn,
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                          backgroundColor: Colors.indigo,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                         child: _isLoading
-                            ? const CircularProgressIndicator(
-                          color: Colors.white,
-                        )
-                            : const Text(
-                          "Sign In",
-                          style: TextStyle(fontSize: 16),
-                        ),
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : const Text("Login", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       ),
                     ),
-
-                    const SizedBox(height: 12),
-
-                    // Signup link
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(builder: (_) => const SignupPage()),
-                        );
-                      },
-                      child: const Text("Create an Account? Sign Up"),
+                    
+                    const SizedBox(height: 15),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text("Don't have an account? "),
+                        GestureDetector(
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SignupPage())),
+                          child: const Text("Sign up", style: TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -390,6 +183,118 @@ class _SigninPageState extends State<SigninPage> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ------------------------------------------------------------------------
+// ✅ 2. Forgot Password Sheet (Email OTP Reset)
+// ------------------------------------------------------------------------
+class ForgotPasswordSheet extends StatefulWidget {
+  const ForgotPasswordSheet({super.key});
+
+  @override
+  State<ForgotPasswordSheet> createState() => _ForgotPasswordSheetState();
+}
+
+class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
+  final _emailController = TextEditingController();
+  final _otpController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+
+  int _step = 1; // 1: Email, 2: OTP & New Password
+  bool _isLoading = false;
+
+  Future<void> _sendOtp() async {
+    if (_emailController.text.isEmpty) return;
+    setState(() => _isLoading = true);
+
+    try {
+      await SupabaseService.client.auth.signInWithOtp(
+        email: _emailController.text.trim(),
+        shouldCreateUser: false,
+      );
+      setState(() => _step = 2);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _resetPassword() async {
+    if (_otpController.text.isEmpty || _newPasswordController.text.isEmpty) return;
+    setState(() => _isLoading = true);
+
+    try {
+      final res = await SupabaseService.client.auth.verifyOTP(
+        email: _emailController.text.trim(),
+        token: _otpController.text.trim(),
+        type: OtpType.email,
+      );
+
+      if (res.session != null) {
+        await SupabaseService.client.auth.updateUser(
+          UserAttributes(password: _newPasswordController.text.trim()),
+        );
+
+        if (!mounted) return;
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Password updated! Please login."), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        top: 15, left: 24, right: 24,
+      ),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(child: Container(width: 40, height: 5, color: Colors.grey[300])),
+          const SizedBox(height: 25),
+          Text(_step == 1 ? "Forgot Password?" : "Reset Password",
+              textAlign: TextAlign.center, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 30),
+          if (_step == 1) ...[
+            TextFormField(
+              controller: _emailController,
+              decoration: InputDecoration(labelText: "Email", prefixIcon: const Icon(Icons.email), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(onPressed: _isLoading ? null : _sendOtp, child: const Text("Get OTP")),
+          ] else ...[
+            TextFormField(
+              controller: _otpController,
+              decoration: InputDecoration(labelText: "OTP Code", prefixIcon: const Icon(Icons.pin), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+            ),
+            const SizedBox(height: 15),
+            TextFormField(
+              controller: _newPasswordController,
+              obscureText: true,
+              decoration: InputDecoration(labelText: "New Password", prefixIcon: const Icon(Icons.lock), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(onPressed: _isLoading ? null : _resetPassword, child: const Text("Update Password")),
+          ],
+          const SizedBox(height: 20),
+        ],
       ),
     );
   }
