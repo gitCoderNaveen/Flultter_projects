@@ -14,8 +14,9 @@ class SupabaseService {
   }
   /// Fetch all profiles with pagination
   static Future<void> fetchAllProfiles({int pageSize = 1000}) async {
+    
     profilesCache.clear();
-    int page = 0;
+    int page = 0;    
     bool hasMore = true;
 
     while (hasMore) {
