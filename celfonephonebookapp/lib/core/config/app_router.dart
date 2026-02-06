@@ -1,9 +1,9 @@
 import 'package:celfonephonebookapp/features/admin/ui/admin_dashboard_page.dart';
+import 'package:celfonephonebookapp/features/partner/ui/partners.dart';
 import 'package:celfonephonebookapp/features/profile/ui/profile_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:celfonephonebookapp/core/config/app_storage.dart';
-import 'package:celfonephonebookapp/features/ads/ui/ads_page.dart';
 import 'package:celfonephonebookapp/features/auth/ui/forgot_password_page.dart';
 import 'package:celfonephonebookapp/features/auth/ui/signup_page.dart';
 import 'package:celfonephonebookapp/features/auth/ui/verify_email_page.dart';
@@ -43,8 +43,8 @@ class AppRouter {
       final isPublicRoute =
           location == '/home' ||
           location == '/search' ||
-          location == '/ads' ||
           location == '/promotions' ||
+          location == '/partner' ||
           location == '/menu' ||
           location == '/onboarding';
 
@@ -97,12 +97,12 @@ class AppRouter {
             pageBuilder: (context, state) => _slidePage(SearchPage()),
           ),
           GoRoute(
-            path: '/ads',
-            pageBuilder: (context, state) => _slidePage(AdsPage()),
-          ),
-          GoRoute(
             path: '/promotions',
             pageBuilder: (context, state) => _slidePage(PromotionsPage()),
+          ),
+          GoRoute(
+            path: '/partner',
+            pageBuilder: (context, state) => _slidePage(PartnersPage()),
           ),
           GoRoute(
             path: '/menu',

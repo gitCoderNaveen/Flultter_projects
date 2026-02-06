@@ -1,4 +1,4 @@
-enum SearchFilter { business, products, city }
+enum SearchFilter { business, products }
 
 extension SearchFilterX on SearchFilter {
   String get label {
@@ -7,8 +7,6 @@ extension SearchFilterX on SearchFilter {
         return 'Business';
       case SearchFilter.products:
         return 'Products';
-      case SearchFilter.city:
-        return 'City';
     }
   }
 }

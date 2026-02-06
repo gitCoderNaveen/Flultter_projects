@@ -20,13 +20,13 @@ class HomeShell extends StatelessWidget {
               context.go('/home');
               break;
             case 1:
-              context.go('/ads');
+              context.go('/promotions');
               break;
             case 2:
               context.go('/search');
               break;
             case 3:
-              context.go('/promotions');
+              context.go('/partner');
               break;
             case 4:
               context.go('/menu');
@@ -37,11 +37,14 @@ class HomeShell extends StatelessWidget {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
 
-          BottomNavigationBarItem(icon: Icon(Icons.campaign), label: 'Ads'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.campaign),
+            label: 'Promotion',
+          ),
           BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
           BottomNavigationBarItem(
             icon: Icon(Icons.local_offer),
-            label: 'Promotions',
+            label: 'partner',
           ),
           BottomNavigationBarItem(icon: Icon(Icons.menu), label: 'Menu'),
         ],
@@ -51,8 +54,8 @@ class HomeShell extends StatelessWidget {
 
   int _indexFromLocation(String location) {
     if (location.startsWith('/search')) return 2;
-    if (location.startsWith('/ads')) return 1;
-    if (location.startsWith('/promotions')) return 3;
+    if (location.startsWith('/promotions')) return 1;
+    if (location.startsWith('/partner')) return 3;
     if (location.startsWith('/menu')) return 4;
     return 0;
   }

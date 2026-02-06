@@ -1,3 +1,5 @@
+import 'package:celfonephonebookapp/features/home/model/popular_firm_model.dart';
+
 import '../../../core/services/supabase_service.dart';
 import '../model/carousel_item.dart';
 
@@ -21,11 +23,11 @@ class HomeService {
     );
   }
 
-  Future<List<String>> fetchPopularFirms() async {
-    final res = await SupabaseService.client
+  Future<List<PopularFirmModel>> fetchPopularFirms() async {
+    final response = await SupabaseService.client
         .from('popular_firms')
-        .select('name');
+        .select();
 
-    return List<String>.from(res.map((e) => e['name'].toString()));
+    return (response as List).map((e) => PopularFirmModel.fromJson(e)).toList();
   }
 }

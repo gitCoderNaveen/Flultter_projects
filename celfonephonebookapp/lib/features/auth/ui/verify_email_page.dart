@@ -1,56 +1,94 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:celfonephonebookapp/core/enums/user_type.dart';
 
-class VerifyEmailPage extends StatelessWidget {
+class VerifyEmailPage extends StatefulWidget {
   const VerifyEmailPage({super.key});
 
-  Future<void> _resendEmail(BuildContext context) async {
-    final user = Supabase.instance.client.auth.currentUser;
-    if (user?.email == null) return;
+  @override
+  State<VerifyEmailPage> createState() => _VerifyEmailPageState();
+}
 
-    await Supabase.instance.client.auth.resend(
-      type: OtpType.signup,
-      email: user!.email!,
+class _VerifyEmailPageState extends State<VerifyEmailPage>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Widget _buildDots() {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (_, __) {
+        final progress = _controller.value;
+
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(5, (i) {
+            final active = progress > i * 0.15 && progress < (i * 0.15 + 0.6);
+
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 6),
+              width: 16,
+              height: 16,
+              decoration: BoxDecoration(
+                color: active
+                    ? const Color(0xFF1FA463)
+                    : const Color(0xFF1FA463).withOpacity(0.4),
+                shape: BoxShape.circle,
+              ),
+            );
+          }),
+        );
+      },
     );
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Verification email sent')));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset('images/ic_launcher.png', width: 90),
-              const SizedBox(height: 24),
+              _buildDots(),
+              const SizedBox(height: 16),
+
               const Text(
-                'Verify your email',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                'Processing',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
-              const SizedBox(height: 12),
+
+              const SizedBox(height: 24),
+
               const Text(
-                'Please check your inbox and verify your email to continue.',
+                'Email Verification',
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () => _resendEmail(context),
-                child: const Text('Resend Email'),
-              ),
-              TextButton(
-                onPressed: () => context.push(
-                  '/complete-profile',
-                  extra: UserType.business, // or individual
+
+              const SizedBox(height: 48),
+
+              GestureDetector(
+                onTap: () => context.go('/home'),
+                child: const Text(
+                  'Go to Home',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                 ),
-                child: const Text('Complete Your Profile'),
               ),
             ],
           ),

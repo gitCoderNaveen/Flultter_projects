@@ -1,3 +1,4 @@
+import 'package:celfonephonebookapp/features/home/model/popular_firm_model.dart';
 import 'package:flutter/material.dart';
 import '../service/home_service.dart';
 import '../model/carousel_item.dart';
@@ -6,24 +7,34 @@ class HomeController extends ChangeNotifier {
   final HomeService _service;
 
   List<CarouselItem> carouselImages = [];
-  List<String> popularFirms = [];
+  List<PopularFirmModel> popularFirms = [];
+
   bool loading = true;
 
   HomeController(this._service);
 
   Future<void> loadData() async {
-    loading = true;
-    notifyListeners();
+    try {
+      loading = true;
+      notifyListeners();
 
-    carouselImages = await _service.fetchAds();
-    popularFirms = await _service.fetchPopularFirms();
+      /// Fetch Ads
+      carouselImages = await _service.fetchAds();
 
-    debugPrint('ADS COUNT: ${carouselImages.length}');
-    if (carouselImages.isNotEmpty) {
-      debugPrint('FIRST IMAGE: ${carouselImages.first.imageUrl}');
+      /// Fetch Popular Firms
+      popularFirms = await _service.fetchPopularFirms();
+
+      debugPrint('ADS COUNT: ${carouselImages.length}');
+      debugPrint('FIRMS COUNT: ${popularFirms.length}');
+
+      if (popularFirms.isNotEmpty) {
+        debugPrint('FIRST FIRM: ${popularFirms.first.name}');
+      }
+    } catch (e) {
+      debugPrint('Home Load Error: $e');
+    } finally {
+      loading = false;
+      notifyListeners();
     }
-
-    loading = false;
-    notifyListeners();
   }
 }

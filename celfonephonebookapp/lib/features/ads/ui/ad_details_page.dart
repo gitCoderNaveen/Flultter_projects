@@ -25,7 +25,9 @@ class AdDetailsPage extends StatelessWidget {
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(
-              child: CircularProgressIndicator(color: Color.fromARGB(255, 255, 53, 53)),
+              child: CircularProgressIndicator(
+                color: Color.fromARGB(255, 255, 53, 53),
+              ),
             );
           }
 

@@ -1,3 +1,4 @@
+import 'package:celfonephonebookapp/core/constants/db_tables.dart';
 import 'package:celfonephonebookapp/features/search/ui/search_result_card.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -31,9 +32,8 @@ class _SearchPageState extends State<SearchPage> {
     setState(() => _loading = true);
 
     final res = await supabase
-        .from('profiles')
+        .from(DbTables.profiles)
         .select()
-        .order('updated_at', ascending: false)
         .order('is_prime', ascending: false)
         .order('priority', ascending: false);
 
@@ -76,9 +76,6 @@ class _SearchPageState extends State<SearchPage> {
         break;
       case SearchFilter.products:
         condition = 'keywords.ilike.%$query%';
-        break;
-      case SearchFilter.city:
-        condition = 'city.ilike.%$query%';
         break;
     }
 

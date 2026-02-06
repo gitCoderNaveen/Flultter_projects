@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:celfonephonebookapp/core/services/profile_service.dart';
+import '../../../core/services/profile_service.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -67,7 +67,9 @@ class _ProfilePageState extends State<ProfilePage> {
     final user = _supabase.auth.currentUser!;
     final path = '${user.id}/avatar.jpg';
 
-    await _supabase.storage.from('avatars').upload(
+    await _supabase.storage
+        .from('avatars')
+        .upload(
           path,
           _pickedImage!,
           fileOptions: const FileOptions(upsert: true),
@@ -105,9 +107,9 @@ class _ProfilePageState extends State<ProfilePage> {
       if (!mounted) return;
       setState(() => _saving = false);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to update profile')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Failed to update profile')));
     }
   }
 
@@ -122,9 +124,7 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final String initials = _nameController.text.isNotEmpty
@@ -148,8 +148,8 @@ class _ProfilePageState extends State<ProfilePage> {
                     backgroundImage: _pickedImage != null
                         ? FileImage(_pickedImage!)
                         : (_avatarUrl != null
-                            ? NetworkImage(_avatarUrl!) as ImageProvider
-                            : null),
+                              ? NetworkImage(_avatarUrl!) as ImageProvider
+                              : null),
                     child: (_pickedImage == null && _avatarUrl == null)
                         ? Text(
                             initials,

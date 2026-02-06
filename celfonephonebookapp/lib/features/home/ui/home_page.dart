@@ -1,5 +1,6 @@
 import 'package:celfonephonebookapp/core/services/profile_service.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../controller/home_controller.dart';
 import '../service/home_service.dart';
@@ -25,16 +26,129 @@ class _HomeView extends StatelessWidget {
     final c = context.watch<HomeController>();
 
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            _Header(),
-            _SearchBar(),
-            _Greeting(),
-            _Carousel(c),
-            _PopularFirms(c),
-            BrowseCategoriesSection(),
-          ],
+      backgroundColor: Colors.grey.shade100,
+      body: CustomScrollView(
+        slivers: [
+          _AnimatedHeader(),
+          SliverToBoxAdapter(child: _Greeting()),
+          SliverToBoxAdapter(child: _Carousel(c)),
+          SliverToBoxAdapter(child: _PopularFirms(c)),
+          // const SliverToBoxAdapter(child: BrowseCategoriesSection()),
+        ],
+      ),
+    );
+  }
+}
+
+class _AnimatedHeader extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return SliverAppBar(
+      pinned: true,
+      expandedHeight: 160,
+      collapsedHeight: 80,
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      flexibleSpace: LayoutBuilder(
+        builder: (context, constraints) {
+          final top = constraints.biggest.height;
+          final bool collapsed = top <= 100;
+
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            padding: const EdgeInsets.only(top: 40),
+            decoration: BoxDecoration(
+              color: collapsed ? Colors.white : const Color(0xFF1F8EB6),
+              borderRadius: const BorderRadius.vertical(
+                bottom: Radius.circular(28),
+              ),
+            ),
+            child: Column(
+              children: [
+                _HeaderRow(collapsed: collapsed),
+                const SizedBox(height: 12),
+                const _StickySearchBar(),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _HeaderRow extends StatelessWidget {
+  final bool collapsed;
+  const _HeaderRow({required this.collapsed});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = collapsed ? Colors.black : Colors.white;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Image.asset('images/ic_launcher.png', width: 36, height: 40),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 300),
+              style: TextStyle(
+                color: color,
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+              ),
+              child: const Text('Celfon Book', textAlign: TextAlign.center),
+            ),
+          ),
+          Icon(Icons.notifications_none, color: color),
+        ],
+      ),
+    );
+  }
+}
+
+class _StickySearchBar extends StatelessWidget {
+  const _StickySearchBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(30),
+        onTap: () {
+          context.push('/search');
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          height: 52,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: const [
+              BoxShadow(
+                blurRadius: 8,
+                color: Colors.black12,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: const [
+              Icon(Icons.search, color: Colors.black),
+              SizedBox(width: 12),
+              Text(
+                'Search people or businesses',
+                style: TextStyle(color: Colors.black54),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -300,10 +414,18 @@ class _SearchBarState extends State<_SearchBar> {
 class _Greeting extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
+    return FutureBuilder<Map<String, dynamic>?>(
       future: ProfileService.getProfile(),
       builder: (context, snapshot) {
-        final name = snapshot.data?['full_name'] ?? 'Guest';
+        String name = 'Guest';
+
+        if (snapshot.connectionState == ConnectionState.done &&
+            snapshot.hasData &&
+            snapshot.data != null &&
+            snapshot.data!['full_name'] != null &&
+            snapshot.data!['full_name'].toString().isNotEmpty) {
+          name = snapshot.data!['full_name'];
+        }
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -337,186 +459,233 @@ class _PopularFirms extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Popular Firms',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.red,
-            ),
-          ),
-          const SizedBox(height: 12),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 4,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
-            ),
-            itemCount: controller.popularFirms.length,
-            itemBuilder: (_, index) {
-              final firm = controller.popularFirms[index];
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (_, __) {
+        if (controller.loading) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-              return GestureDetector(
-                onTap: () {
-                  // TODO: Navigate to category
-                },
-                child: Column(
-                  children: [
-                    const Icon(Icons.business, size: 36),
-                    const SizedBox(height: 6),
-                    Text(
-                      firm,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ],
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Popular Firms',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
                 ),
-              );
-            },
+              ),
+
+              const SizedBox(height: 16),
+
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: controller.popularFirms.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 16,
+                  childAspectRatio: 0.9,
+                ),
+                itemBuilder: (_, index) {
+                  final firm = controller.popularFirms[index];
+
+                  return GestureDetector(
+                    onTap: () {},
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.shade300,
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          /// Logo Circle
+                          Container(
+                            height: 50,
+                            width: 50,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade200,
+                              shape: BoxShape.circle,
+                            ),
+                            child: ClipOval(
+                              child: firm.logoUrl.isNotEmpty
+                                  ? Image.network(
+                                      firm.logoUrl,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) =>
+                                          const Icon(Icons.business),
+                                    )
+                                  : const Icon(Icons.business),
+                            ),
+                          ),
+
+                          const SizedBox(height: 10),
+
+                          Text(
+                            firm.name,
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
 
 /// ---------------- BROWSE CATEGORIES ----------------
 
-class BrowseCategoriesSection extends StatefulWidget {
-  const BrowseCategoriesSection({super.key});
+// class BrowseCategoriesSection extends StatefulWidget {
+//   const BrowseCategoriesSection({super.key});
 
-  @override
-  State<BrowseCategoriesSection> createState() =>
-      _BrowseCategoriesSectionState();
-}
+//   @override
+//   State<BrowseCategoriesSection> createState() =>
+//       _BrowseCategoriesSectionState();
+// }
 
-class _BrowseCategoriesSectionState extends State<BrowseCategoriesSection> {
-  bool isB2C = true;
+// class _BrowseCategoriesSectionState extends State<BrowseCategoriesSection> {
+//   bool isB2C = true;
 
-  final categories = const [
-    _CategoryItem(Icons.local_hospital_outlined, 'Hospital'),
-    _CategoryItem(Icons.hotel_outlined, 'Hotels'),
-    _CategoryItem(Icons.school_outlined, 'Colleges'),
-    _CategoryItem(Icons.medical_services_outlined, 'Doctors'),
-    _CategoryItem(Icons.storefront_outlined, 'Shops'),
-    _CategoryItem(Icons.home_work_outlined, 'Real Estate'),
-    _CategoryItem(Icons.business_center_outlined, 'Consultants'),
-    _CategoryItem(Icons.build_outlined, 'Repair'),
-  ];
+//   final categories = const [
+//     _CategoryItem(Icons.local_hospital_outlined, 'Hospital'),
+//     _CategoryItem(Icons.hotel_outlined, 'Hotels'),
+//     _CategoryItem(Icons.school_outlined, 'Colleges'),
+//     _CategoryItem(Icons.medical_services_outlined, 'Doctors'),
+//     _CategoryItem(Icons.storefront_outlined, 'Shops'),
+//     _CategoryItem(Icons.home_work_outlined, 'Real Estate'),
+//     _CategoryItem(Icons.business_center_outlined, 'Consultants'),
+//     _CategoryItem(Icons.build_outlined, 'Repair'),
+//   ];
 
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Browse Categories',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-                ),
-                _toggle(),
-              ],
-            ),
-            const SizedBox(height: 20),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: categories.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-              ),
-              itemBuilder: (_, i) => _CategoryCard(item: categories[i]),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+//   @override
+//   Widget build(BuildContext context) {
+//     return Padding(
+//       padding: const EdgeInsets.all(16),
+//       child: Container(
+//         padding: const EdgeInsets.all(20),
+//         decoration: BoxDecoration(
+//           color: Colors.white,
+//           borderRadius: BorderRadius.circular(20),
+//         ),
+//         child: Column(
+//           crossAxisAlignment: CrossAxisAlignment.start,
+//           children: [
+//             Row(
+//               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//               children: [
+//                 const Text(
+//                   'Browse Categories',
+//                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+//                 ),
+//                 _toggle(),
+//               ],
+//             ),
+//             const SizedBox(height: 20),
+//             GridView.builder(
+//               shrinkWrap: true,
+//               physics: const NeverScrollableScrollPhysics(),
+//               itemCount: categories.length,
+//               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+//                 crossAxisCount: 4,
+//                 mainAxisSpacing: 16,
+//                 crossAxisSpacing: 16,
+//               ),
+//               itemBuilder: (_, i) => _CategoryCard(item: categories[i]),
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
 
-  Widget _toggle() {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF1F3F6),
-        borderRadius: BorderRadius.circular(30),
-      ),
-      child: Row(
-        children: [
-          _toggleItem('B2C', isB2C, () => setState(() => isB2C = true)),
-          _toggleItem('B2B', !isB2C, () => setState(() => isB2C = false)),
-        ],
-      ),
-    );
-  }
+//   Widget _toggle() {
+//     return Container(
+//       decoration: BoxDecoration(
+//         color: const Color(0xFFF1F3F6),
+//         borderRadius: BorderRadius.circular(30),
+//       ),
+//       child: Row(
+//         children: [
+//           _toggleItem('B2C', isB2C, () => setState(() => isB2C = true)),
+//           _toggleItem('B2B', !isB2C, () => setState(() => isB2C = false)),
+//         ],
+//       ),
+//     );
+//   }
 
-  Widget _toggleItem(String text, bool selected, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? Colors.black : Colors.transparent,
-          borderRadius: BorderRadius.circular(30),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            color: selected ? Colors.white : Colors.black54,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
-}
+//   Widget _toggleItem(String text, bool selected, VoidCallback onTap) {
+//     return GestureDetector(
+//       onTap: onTap,
+//       child: Container(
+//         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+//         decoration: BoxDecoration(
+//           color: selected ? Colors.black : Colors.transparent,
+//           borderRadius: BorderRadius.circular(30),
+//         ),
+//         child: Text(
+//           text,
+//           style: TextStyle(
+//             color: selected ? Colors.white : Colors.black54,
+//             fontWeight: FontWeight.w600,
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+// }
 
-class _CategoryItem {
-  final IconData icon;
-  final String title;
-  const _CategoryItem(this.icon, this.title);
-}
+// class _CategoryItem {
+//   final IconData icon;
+//   final String title;
+//   const _CategoryItem(this.icon, this.title);
+// }
 
-class _CategoryCard extends StatelessWidget {
-  final _CategoryItem item;
-  const _CategoryCard({required this.item});
+// class _CategoryCard extends StatelessWidget {
+//   final _CategoryItem item;
+//   const _CategoryCard({required this.item});
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(item.icon, size: 28, color: const Color(0xFF2563EB)),
-          const SizedBox(height: 10),
-          Text(
-            item.title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 13),
-          ),
-        ],
-      ),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return Container(
+//       decoration: BoxDecoration(
+//         borderRadius: BorderRadius.circular(16),
+//         border: Border.all(color: const Color(0xFFE5E7EB)),
+//       ),
+//       child: Column(
+//         mainAxisAlignment: MainAxisAlignment.center,
+//         children: [
+//           Icon(item.icon, size: 28, color: const Color(0xFF2563EB)),
+//           const SizedBox(height: 10),
+//           Text(
+//             item.title,
+//             textAlign: TextAlign.center,
+//             style: const TextStyle(fontSize: 13),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
