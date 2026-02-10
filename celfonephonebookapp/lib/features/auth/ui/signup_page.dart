@@ -12,29 +12,34 @@ class SignupPage extends StatefulWidget {
 }
 
 class _SignupPageState extends State<SignupPage> {
+  final _nameController = TextEditingController();
+  final _cityController = TextEditingController();
+  final _businessNameController = TextEditingController();
+  final _businessCategoryController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _usernameController = TextEditingController();
-  final _mobileController = TextEditingController();
+
+  bool _isBusiness = false;
+  bool _isMobile = true;
 
   bool _isMobileValid = false;
   bool _isPasswordValid = false;
 
-  String _userType = 'individual'; // default
-
   bool _loading = false;
-  String? _error;
   bool _networkError = false;
-
-  bool _validateUsername(String value) {
-    return RegExp(r'^[a-zA-Z ]+$').hasMatch(value);
-  }
+  String? _error;
 
   bool _validateIndianMobile(String value) {
     return RegExp(r'^[6-9]\d{9}$').hasMatch(value);
   }
 
   Future<void> _signup() async {
+    if (_phoneController.text.isEmpty || _passwordController.text.length < 8) {
+      setState(() => _error = 'Phone and password are required');
+      return;
+    }
+
     setState(() {
       _loading = true;
       _error = null;
@@ -42,42 +47,47 @@ class _SignupPageState extends State<SignupPage> {
     });
 
     try {
+      /// 🔑 Prepare phone number (NO validation, just prefix +)
+      String phone = _phoneController.text.trim();
+      if (!phone.startsWith('+')) {
+        phone = '+$phone';
+      }
+
+      /// ✅ PHONE + PASSWORD SIGNUP
       final authRes = await Supabase.instance.client.auth.signUp(
-        email: _emailController.text.trim(),
+        phone: phone,
         password: _passwordController.text.trim(),
-        emailRedirectTo: 'io.supabase.flutter://login-callback',
       );
 
       final user = authRes.user;
-      if (user == null) throw 'User not created';
+      if (user == null) {
+        throw 'User not created';
+      }
 
-      /// 🗄️ Insert profile data
+      /// 🗄️ Save profile data
       await Supabase.instance.client.from('s_profiles').insert({
         'id': user.id,
-        'full_name': _usernameController.text.trim(),
-        'phone': _mobileController.text.trim(),
-        'user_type': _userType,
-        'password': _passwordController.text.trim(),
+        'full_name': _nameController.text.trim(),
+        'phone': _phoneController.text.trim(), // raw phone (no +)
+        'city': _cityController.text.trim(),
+        'user_type': _isBusiness ? 'business' : 'individual',
+        'business_name': _isBusiness
+            ? _businessNameController.text.trim()
+            : null,
+        'business_category': _isBusiness
+            ? _businessCategoryController.text.trim()
+            : null,
       });
 
       if (!mounted) return;
-      context.go('/verify-email');
-    } on SocketException {
-      setState(() => _networkError = true);
+      context.go('/home');
     } on AuthException catch (e) {
       setState(() => _error = e.message);
-    } catch (_) {
-      setState(() => _error = 'Something went wrong');
+    } catch (e) {
+      setState(() => _error = 'Signup failed');
     } finally {
       setState(() => _loading = false);
     }
-  }
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
   }
 
   @override
@@ -92,7 +102,7 @@ class _SignupPageState extends State<SignupPage> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              /// 🔵 Top Curved Header
+              /// 🔵 Header
               Container(
                 height: 260,
                 width: double.infinity,
@@ -105,7 +115,6 @@ class _SignupPageState extends State<SignupPage> {
                 ),
                 child: Stack(
                   children: [
-                    /// 📝 Bottom-Left Text
                     const Positioned(
                       bottom: 32,
                       left: 24,
@@ -119,14 +128,12 @@ class _SignupPageState extends State<SignupPage> {
                         ),
                       ),
                     ),
-
-                    /// 🖼 Bottom-Right Image
                     Positioned(
                       bottom: 0,
                       right: 0,
                       child: Image.asset(
                         'images/signup.png',
-                        height: 300, // make it big
+                        height: 240,
                         fit: BoxFit.contain,
                       ),
                     ),
@@ -136,62 +143,81 @@ class _SignupPageState extends State<SignupPage> {
 
               const SizedBox(height: 40),
 
-              /// ✍️ Form
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    /// USER TYPE
                     ToggleButtons(
-                      isSelected: [
-                        _userType == 'individual',
-                        _userType == 'business',
-                      ],
+                      isSelected: [_isBusiness == false, _isBusiness == true],
                       onPressed: (index) {
-                        setState(() {
-                          _userType = index == 0 ? 'individual' : 'business';
-                        });
+                        setState(() => _isBusiness = index == 1);
                       },
                       borderRadius: BorderRadius.circular(12),
                       children: const [
                         Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 20),
-                          child: Text('Individual'),
+                          padding: EdgeInsets.symmetric(horizontal: 16),
+                          child: Text('Person'),
                         ),
                         Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 20),
+                          padding: EdgeInsets.symmetric(horizontal: 16),
                           child: Text('Business'),
                         ),
                       ],
                     ),
 
+                    const SizedBox(height: 20),
+
                     _InputField(
-                      hint: 'Username',
-                      controller: _usernameController,
-                      onChanged: (v) {
-                        if (!_validateUsername(v)) {
-                          setState(
-                            () => _error = 'Username cannot contain numbers',
-                          );
-                        } else {
-                          setState(() => _error = null);
-                        }
-                      },
+                      hint: 'Full Name',
+                      icon: Icons.person_outline,
+                      controller: _nameController,
                     ),
+
+                    const SizedBox(height: 16),
+
+                    ToggleButtons(
+                      isSelected: [_isMobile, !_isMobile],
+                      onPressed: (index) {
+                        setState(() {
+                          _isMobile = index == 0;
+                          _isMobileValid = !_isMobile;
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      children: const [
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16),
+                          child: Text('Mobile'),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16),
+                          child: Text('Landline'),
+                        ),
+                      ],
+                    ),
+
                     const SizedBox(height: 16),
 
                     TextField(
-                      controller: _mobileController,
+                      controller: _phoneController,
                       keyboardType: TextInputType.phone,
-                      maxLength: 10,
+                      maxLength: _isMobile ? 10 : null,
                       onChanged: (v) {
-                        setState(() {
-                          _isMobileValid = _validateIndianMobile(v);
-                        });
+                        if (_isMobile) {
+                          setState(() {
+                            _isMobileValid = _validateIndianMobile(v);
+                          });
+                        }
                       },
                       decoration: InputDecoration(
-                        hintText: 'Mobile Number',
+                        hintText: _isMobile
+                            ? 'Mobile Number'
+                            : 'Landline Number',
                         counterText: '',
-                        suffixIcon: _isMobileValid
+                        prefixIcon: const Icon(Icons.phone_outlined),
+                        suffixIcon: _isMobile && _isMobileValid
                             ? const Icon(
                                 Icons.check_circle,
                                 color: Colors.green,
@@ -205,22 +231,51 @@ class _SignupPageState extends State<SignupPage> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
 
-                    _InputField(hint: 'Email', controller: _emailController),
                     const SizedBox(height: 16),
 
                     _InputField(
-                      hint: 'Password',
+                      hint: 'City',
+                      icon: Icons.location_city_outlined,
+                      controller: _cityController,
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    if (_isBusiness) ...[
+                      _InputField(
+                        hint: 'Business Name',
+                        icon: Icons.store_outlined,
+                        controller: _businessNameController,
+                      ),
+                      const SizedBox(height: 16),
+                      _InputField(
+                        hint: 'Business Category',
+                        icon: Icons.category_outlined,
+                        controller: _businessCategoryController,
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // _InputField(
+                    //   hint: 'Email',
+                    //   icon: Icons.email_outlined,
+                    //   controller: _emailController,
+                    // ),
+                    const SizedBox(height: 16),
+
+                    _InputField(
+                      hint: 'Set Password',
+                      icon: Icons.lock_outline,
                       controller: _passwordController,
                       obscure: true,
                       onChanged: (v) {
-                        setState(() {
-                          _isPasswordValid = v.length >= 8;
-                        });
+                        setState(() => _isPasswordValid = v.length >= 8);
                       },
                     ),
-                    if (!_isPasswordValid)
+
+                    if (!_isPasswordValid &&
+                        _passwordController.text.isNotEmpty)
                       const Padding(
                         padding: EdgeInsets.only(top: 6),
                         child: Text(
@@ -229,27 +284,24 @@ class _SignupPageState extends State<SignupPage> {
                         ),
                       ),
 
-                    const SizedBox(height: 20),
-
                     if (_error != null)
-                      Text(_error!, style: const TextStyle(color: Colors.red)),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Text(
+                          _error!,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      ),
 
                     const SizedBox(height: 30),
 
-                    /// ➡️ Sign Up Button
+                    /// SIGN UP BUTTON
                     Align(
                       alignment: Alignment.centerRight,
                       child: GestureDetector(
-                        onTap:
-                            (_loading ||
-                                !_isMobileValid ||
-                                !_isPasswordValid ||
-                                !_validateUsername(_usernameController.text))
-                            ? null
-                            : _signup,
-
+                        onTap: _loading ? null : _signup,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
                           height: 56,
                           decoration: BoxDecoration(
                             color: Colors.black,
@@ -287,7 +339,6 @@ class _SignupPageState extends State<SignupPage> {
 
                     const SizedBox(height: 40),
 
-                    /// 🔁 Login Redirect
                     TextButton(
                       onPressed: () => context.go('/login'),
                       child: const Text(
@@ -306,14 +357,17 @@ class _SignupPageState extends State<SignupPage> {
   }
 }
 
+/// 🔹 Reusable Input
 class _InputField extends StatelessWidget {
   final String hint;
+  final IconData icon;
   final TextEditingController controller;
   final bool obscure;
   final ValueChanged<String>? onChanged;
 
   const _InputField({
     required this.hint,
+    required this.icon,
     required this.controller,
     this.obscure = false,
     this.onChanged,
@@ -327,6 +381,7 @@ class _InputField extends StatelessWidget {
       onChanged: onChanged,
       decoration: InputDecoration(
         hintText: hint,
+        prefixIcon: Icon(icon, color: Colors.grey),
         filled: true,
         fillColor: Colors.grey.shade100,
         contentPadding: const EdgeInsets.symmetric(

@@ -1,19 +1,10 @@
 class PopularFirmModel {
-  final int id;
-  final String name;
-  final String logoUrl;
+  final String title;
+  final String imageUrl;
 
-  PopularFirmModel({
-    required this.id,
-    required this.name,
-    required this.logoUrl,
-  });
+  PopularFirmModel({required this.title, required this.imageUrl});
 
   factory PopularFirmModel.fromJson(Map<String, dynamic> json) {
-    return PopularFirmModel(
-      id: json['id'],
-      name: json['name'],
-      logoUrl: json['icon_url'] ?? '',
-    );
+    return PopularFirmModel(title: json['name'], imageUrl: json['icon_url']);
   }
 }

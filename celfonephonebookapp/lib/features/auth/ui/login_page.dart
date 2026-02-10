@@ -1,3 +1,6 @@
+import 'package:celfonephonebookapp/core/services/auth_service.dart';
+import 'package:celfonephonebookapp/features/auth/ui/signup_page.dart';
+import 'package:celfonephonebookapp/features/home/ui/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -10,43 +13,60 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _emailController = TextEditingController();
+  final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _authService = AuthService();
 
   bool _loading = false;
   String? _error;
 
-  Future<void> _login() async {
+  Future<void> _handleLogin() async {
+    if (_identifierController.text.isEmpty ||
+        _passwordController.text.isEmpty) {
+      setState(() => _error = 'Please fill all fields');
+      return;
+    }
+
     setState(() {
       _loading = true;
       _error = null;
     });
 
     try {
-      await Supabase.instance.client.auth.signInWithPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
+      final identifier = _identifierController.text.trim();
+
+      if (identifier.contains('@')) {
+        /// ✅ Email login
+        await Supabase.instance.client.auth.signInWithPassword(
+          email: identifier,
+          password: _passwordController.text.trim(),
+        );
+      } else {
+        /// ✅ Phone login (must include country code)
+        await Supabase.instance.client.auth.signInWithPassword(
+          phone: identifier.startsWith('+') ? identifier : '+$identifier',
+          password: _passwordController.text.trim(),
+        );
+      }
 
       if (!mounted) return;
       context.go('/home');
     } on AuthException catch (e) {
       setState(() => _error = e.message);
     } catch (_) {
-      setState(() => _error = 'Something went wrong');
+      setState(() => _error = 'Login failed. Please try again.');
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _identifierController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  @override
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -68,7 +88,6 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 child: Stack(
                   children: [
-                    /// 📝 Bottom-Left Text
                     const Positioned(
                       bottom: 32,
                       left: 24,
@@ -82,13 +101,11 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                     ),
-
-                    /// 🖼 Bottom-Right Image
                     Positioned(
                       bottom: 0,
                       right: 0,
                       child: Image.asset(
-                        'images/signup.png', // or reuse signup.png
+                        'images/signup.png',
                         height: 300,
                         fit: BoxFit.contain,
                       ),
@@ -104,11 +121,16 @@ class _LoginPageState extends State<LoginPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   children: [
-                    _InputField(hint: 'Email', controller: _emailController),
+                    _InputField(
+                      hint: 'Mobile Number',
+                      icon: Icons.phone_outlined,
+                      controller: _identifierController,
+                    ),
                     const SizedBox(height: 16),
 
                     _InputField(
                       hint: 'Password',
+                      icon: Icons.lock_outline,
                       controller: _passwordController,
                       obscure: true,
                     ),
@@ -119,7 +141,9 @@ class _LoginPageState extends State<LoginPage> {
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: () => context.push('/forgot-password'),
+                        onPressed: () {
+                          // TODO: navigate to forgot password
+                        },
                         child: const Text(
                           'Forgot password?',
                           style: TextStyle(color: Colors.grey),
@@ -128,7 +152,13 @@ class _LoginPageState extends State<LoginPage> {
                     ),
 
                     if (_error != null)
-                      Text(_error!, style: const TextStyle(color: Colors.red)),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          _error!,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      ),
 
                     const SizedBox(height: 30),
 
@@ -136,9 +166,9 @@ class _LoginPageState extends State<LoginPage> {
                     Align(
                       alignment: Alignment.centerRight,
                       child: GestureDetector(
-                        onTap: _loading ? null : _login,
+                        onTap: _loading ? null : _handleLogin,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
                           height: 56,
                           decoration: BoxDecoration(
                             color: Colors.black,
@@ -178,7 +208,12 @@ class _LoginPageState extends State<LoginPage> {
 
                     /// 🔁 Signup Redirect
                     TextButton(
-                      onPressed: () => context.push('/signup'),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const SignupPage()),
+                        );
+                      },
                       child: const Text(
                         'Create new account',
                         style: TextStyle(color: Colors.grey),
@@ -195,14 +230,17 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
+/// 🔹 Reusable Input Field
 class _InputField extends StatelessWidget {
   final String hint;
   final TextEditingController controller;
   final bool obscure;
+  final IconData icon;
 
   const _InputField({
     required this.hint,
     required this.controller,
+    required this.icon,
     this.obscure = false,
   });
 
@@ -213,6 +251,7 @@ class _InputField extends StatelessWidget {
       obscureText: obscure,
       decoration: InputDecoration(
         hintText: hint,
+        prefixIcon: Icon(icon, color: Colors.grey),
         filled: true,
         fillColor: Colors.grey.shade100,
         contentPadding: const EdgeInsets.symmetric(

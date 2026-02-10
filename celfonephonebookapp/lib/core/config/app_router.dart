@@ -53,7 +53,7 @@ class AppRouter {
           location == '/signup' ||
           location == '/forgot-password';
 
-      final isVerifyRoute = location == '/verify-email';
+      // final isVerifyRoute = location == '/verify-email';
 
       // 3️⃣ Guest user (not logged in)
       if (user == null) {
@@ -65,14 +65,14 @@ class AppRouter {
       }
 
       // 4️⃣ Logged in but email not verified
-      if (user.emailConfirmedAt == null) {
-        return isVerifyRoute ? null : '/verify-email';
-      }
+      // if (user.emailConfirmedAt == null) {
+      //   return isVerifyRoute ? null : '/verify-email';
+      // }
 
       // 5️⃣ Logged in & verified → block auth pages
-      if (isAuthRoute) {
-        return '/home';
-      }
+      // if (isAuthRoute) {
+      //   return '/home';
+      // }
 
       return null;
     },

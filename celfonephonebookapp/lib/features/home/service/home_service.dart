@@ -23,11 +23,12 @@ class HomeService {
     );
   }
 
-  Future<List<PopularFirmModel>> fetchPopularFirms() async {
-    final response = await SupabaseService.client
+  Future<List<PopularFirmModel>> getPopularFirms() async {
+    final res = await SupabaseService.client
         .from('popular_firms')
-        .select();
+        .select()
+        .eq('is_active', true);
 
-    return (response as List).map((e) => PopularFirmModel.fromJson(e)).toList();
+    return (res as List).map((e) => PopularFirmModel.fromJson(e)).toList();
   }
 }

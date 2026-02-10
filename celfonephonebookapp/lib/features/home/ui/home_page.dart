@@ -1,4 +1,5 @@
 import 'package:celfonephonebookapp/core/services/profile_service.dart';
+import 'package:celfonephonebookapp/features/home/controller/popular_firm_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -32,8 +33,8 @@ class _HomeView extends StatelessWidget {
           _AnimatedHeader(),
           SliverToBoxAdapter(child: _Greeting()),
           SliverToBoxAdapter(child: _Carousel(c)),
-          SliverToBoxAdapter(child: _PopularFirms(c)),
-          // const SliverToBoxAdapter(child: BrowseCategoriesSection()),
+          SliverToBoxAdapter(child: _IndexFinder()),
+          SliverToBoxAdapter(child: _PopularFirms()),
         ],
       ),
     );
@@ -453,239 +454,139 @@ class _Greeting extends StatelessWidget {
   }
 }
 
-class _PopularFirms extends StatelessWidget {
-  final HomeController controller;
-  const _PopularFirms(this.controller);
+class _IndexFinder extends StatelessWidget {
+  final List<String> alphabets = List.generate(
+    26,
+    (i) => String.fromCharCode(65 + i),
+  );
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (_, __) {
-        if (controller.loading) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Index Finder',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 56,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: alphabets.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final letter = alphabets[index];
 
-        return Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Popular Firms',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: controller.popularFirms.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  mainAxisSpacing: 16,
-                  crossAxisSpacing: 16,
-                  childAspectRatio: 0.9,
-                ),
-                itemBuilder: (_, index) {
-                  final firm = controller.popularFirms[index];
-
-                  return GestureDetector(
-                    onTap: () {},
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.shade300,
-                            blurRadius: 6,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          /// Logo Circle
-                          Container(
-                            height: 50,
-                            width: 50,
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade200,
-                              shape: BoxShape.circle,
-                            ),
-                            child: ClipOval(
-                              child: firm.logoUrl.isNotEmpty
-                                  ? Image.network(
-                                      firm.logoUrl,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) =>
-                                          const Icon(Icons.business),
-                                    )
-                                  : const Icon(Icons.business),
-                            ),
-                          ),
-
-                          const SizedBox(height: 10),
-
-                          Text(
-                            firm.name,
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        ],
+                return InkWell(
+                  borderRadius: BorderRadius.circular(30),
+                  onTap: () {
+                    context.push('/search?letter=$letter');
+                  },
+                  child: Container(
+                    width: 52,
+                    height: 52,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white,
+                      border: Border.all(
+                        color: Colors.red, // 🔴 outline color
+                        width: 2, // outline thickness
                       ),
                     ),
-                  );
-                },
-              ),
-            ],
+                    child: Text(
+                      letter,
+                      style: const TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 }
 
-/// ---------------- BROWSE CATEGORIES ----------------
+class _PopularFirms extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => PopularFirmController()..loadFirms(),
+      child: Consumer<PopularFirmController>(
+        builder: (context, c, _) {
+          if (c.loading) {
+            return const Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
 
-// class BrowseCategoriesSection extends StatefulWidget {
-//   const BrowseCategoriesSection({super.key});
+          if (c.firms.isEmpty) {
+            return const SizedBox();
+          }
 
-//   @override
-//   State<BrowseCategoriesSection> createState() =>
-//       _BrowseCategoriesSectionState();
-// }
-
-// class _BrowseCategoriesSectionState extends State<BrowseCategoriesSection> {
-//   bool isB2C = true;
-
-//   final categories = const [
-//     _CategoryItem(Icons.local_hospital_outlined, 'Hospital'),
-//     _CategoryItem(Icons.hotel_outlined, 'Hotels'),
-//     _CategoryItem(Icons.school_outlined, 'Colleges'),
-//     _CategoryItem(Icons.medical_services_outlined, 'Doctors'),
-//     _CategoryItem(Icons.storefront_outlined, 'Shops'),
-//     _CategoryItem(Icons.home_work_outlined, 'Real Estate'),
-//     _CategoryItem(Icons.business_center_outlined, 'Consultants'),
-//     _CategoryItem(Icons.build_outlined, 'Repair'),
-//   ];
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Padding(
-//       padding: const EdgeInsets.all(16),
-//       child: Container(
-//         padding: const EdgeInsets.all(20),
-//         decoration: BoxDecoration(
-//           color: Colors.white,
-//           borderRadius: BorderRadius.circular(20),
-//         ),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             Row(
-//               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//               children: [
-//                 const Text(
-//                   'Browse Categories',
-//                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-//                 ),
-//                 _toggle(),
-//               ],
-//             ),
-//             const SizedBox(height: 20),
-//             GridView.builder(
-//               shrinkWrap: true,
-//               physics: const NeverScrollableScrollPhysics(),
-//               itemCount: categories.length,
-//               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-//                 crossAxisCount: 4,
-//                 mainAxisSpacing: 16,
-//                 crossAxisSpacing: 16,
-//               ),
-//               itemBuilder: (_, i) => _CategoryCard(item: categories[i]),
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-
-//   Widget _toggle() {
-//     return Container(
-//       decoration: BoxDecoration(
-//         color: const Color(0xFFF1F3F6),
-//         borderRadius: BorderRadius.circular(30),
-//       ),
-//       child: Row(
-//         children: [
-//           _toggleItem('B2C', isB2C, () => setState(() => isB2C = true)),
-//           _toggleItem('B2B', !isB2C, () => setState(() => isB2C = false)),
-//         ],
-//       ),
-//     );
-//   }
-
-//   Widget _toggleItem(String text, bool selected, VoidCallback onTap) {
-//     return GestureDetector(
-//       onTap: onTap,
-//       child: Container(
-//         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-//         decoration: BoxDecoration(
-//           color: selected ? Colors.black : Colors.transparent,
-//           borderRadius: BorderRadius.circular(30),
-//         ),
-//         child: Text(
-//           text,
-//           style: TextStyle(
-//             color: selected ? Colors.white : Colors.black54,
-//             fontWeight: FontWeight.w600,
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-// }
-
-// class _CategoryItem {
-//   final IconData icon;
-//   final String title;
-//   const _CategoryItem(this.icon, this.title);
-// }
-
-// class _CategoryCard extends StatelessWidget {
-//   final _CategoryItem item;
-//   const _CategoryCard({required this.item});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Container(
-//       decoration: BoxDecoration(
-//         borderRadius: BorderRadius.circular(16),
-//         border: Border.all(color: const Color(0xFFE5E7EB)),
-//       ),
-//       child: Column(
-//         mainAxisAlignment: MainAxisAlignment.center,
-//         children: [
-//           Icon(item.icon, size: 28, color: const Color(0xFF2563EB)),
-//           const SizedBox(height: 10),
-//           Text(
-//             item.title,
-//             textAlign: TextAlign.center,
-//             style: const TextStyle(fontSize: 13),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-// }
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Popular Firms',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: c.firms.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    childAspectRatio: 0.9,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                  ),
+                  itemBuilder: (_, index) {
+                    final item = c.firms[index];
+                    return Column(
+                      children: [
+                        Container(
+                          height: 44,
+                          width: 44,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Image.network(
+                            item.imageUrl,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) =>
+                                const Icon(Icons.image_not_supported),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          item.title,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
