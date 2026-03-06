@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:celfonephonebookapp/core/services/supabase_service.dart';
+import 'package:celfonephonebookapp/features/auth/ui/login_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -13,18 +15,10 @@ class SignupPage extends StatefulWidget {
 
 class _SignupPageState extends State<SignupPage> {
   final _nameController = TextEditingController();
-  final _cityController = TextEditingController();
-  final _businessNameController = TextEditingController();
-  final _businessCategoryController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-
-  bool _isBusiness = false;
-  bool _isMobile = true;
+  final _promoController = TextEditingController();
 
   bool _isMobileValid = false;
-  bool _isPasswordValid = false;
 
   bool _loading = false;
   bool _networkError = false;
@@ -35,48 +29,53 @@ class _SignupPageState extends State<SignupPage> {
   }
 
   Future<void> _signup() async {
-    if (_phoneController.text.isEmpty || _passwordController.text.length < 8) {
-      setState(() => _error = 'Phone and password are required');
+    if (_phoneController.text.trim().isEmpty) {
+      setState(() => _error = 'Phone number is required');
+      return;
+    }
+
+    if (!_validateIndianMobile(_phoneController.text.trim())) {
+      setState(() => _error = 'Enter valid mobile number');
+      return;
+    }
+
+    if (_nameController.text.trim().isEmpty) {
+      setState(() => _error = 'Full name is required');
       return;
     }
 
     setState(() {
       _loading = true;
       _error = null;
-      _networkError = false;
     });
 
     try {
-      /// 🔑 Prepare phone number (NO validation, just prefix +)
       String phone = _phoneController.text.trim();
+
+      // Add +91 automatically if missing
       if (!phone.startsWith('+')) {
         phone = '+$phone';
       }
 
-      /// ✅ PHONE + PASSWORD SIGNUP
-      final authRes = await Supabase.instance.client.auth.signUp(
+      /// 🔐 DEFAULT PASSWORD
+      const String defaultPassword = 'celfonbook';
+
+      final AuthResponse authRes = await SupabaseService.client.auth.signUp(
         phone: phone,
-        password: _passwordController.text.trim(),
+        password: defaultPassword,
       );
 
       final user = authRes.user;
       if (user == null) {
-        throw 'User not created';
+        throw Exception('User not created');
       }
 
-      /// 🗄️ Save profile data
-      await Supabase.instance.client.from('s_profiles').insert({
+      /// Save profile
+      await SupabaseService.client.from('s_profiles').insert({
         'id': user.id,
         'full_name': _nameController.text.trim(),
-        'phone': _phoneController.text.trim(), // raw phone (no +)
-        'city': _cityController.text.trim(),
-        'user_type': _isBusiness ? 'business' : 'individual',
-        'business_name': _isBusiness
-            ? _businessNameController.text.trim()
-            : null,
-        'business_category': _isBusiness
-            ? _businessCategoryController.text.trim()
-            : null,
+        'phone': _phoneController.text.trim(),
+        'promo_code': _promoController.text.trim(),
       });
 
       if (!mounted) return;
@@ -148,76 +147,21 @@ class _SignupPageState extends State<SignupPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    /// USER TYPE
-                    ToggleButtons(
-                      isSelected: [_isBusiness == false, _isBusiness == true],
-                      onPressed: (index) {
-                        setState(() => _isBusiness = index == 1);
-                      },
-                      borderRadius: BorderRadius.circular(12),
-                      children: const [
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16),
-                          child: Text('Person'),
-                        ),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16),
-                          child: Text('Business'),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    _InputField(
-                      hint: 'Full Name',
-                      icon: Icons.person_outline,
-                      controller: _nameController,
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    ToggleButtons(
-                      isSelected: [_isMobile, !_isMobile],
-                      onPressed: (index) {
-                        setState(() {
-                          _isMobile = index == 0;
-                          _isMobileValid = !_isMobile;
-                        });
-                      },
-                      borderRadius: BorderRadius.circular(12),
-                      children: const [
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16),
-                          child: Text('Mobile'),
-                        ),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16),
-                          child: Text('Landline'),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 16),
-
+                    /// 📱 Mobile Number
                     TextField(
                       controller: _phoneController,
                       keyboardType: TextInputType.phone,
-                      maxLength: _isMobile ? 10 : null,
+                      maxLength: 10,
                       onChanged: (v) {
-                        if (_isMobile) {
-                          setState(() {
-                            _isMobileValid = _validateIndianMobile(v);
-                          });
-                        }
+                        setState(() {
+                          _isMobileValid = _validateIndianMobile(v);
+                        });
                       },
                       decoration: InputDecoration(
-                        hintText: _isMobile
-                            ? 'Mobile Number'
-                            : 'Landline Number',
+                        hintText: 'Mobile Number',
                         counterText: '',
                         prefixIcon: const Icon(Icons.phone_outlined),
-                        suffixIcon: _isMobile && _isMobileValid
+                        suffixIcon: _isMobileValid
                             ? const Icon(
                                 Icons.check_circle,
                                 color: Colors.green,
@@ -225,6 +169,10 @@ class _SignupPageState extends State<SignupPage> {
                             : null,
                         filled: true,
                         fillColor: Colors.grey.shade100,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 18,
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
                           borderSide: BorderSide.none,
@@ -232,57 +180,23 @@ class _SignupPageState extends State<SignupPage> {
                       ),
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
+                    /// 👤 Full Name
                     _InputField(
-                      hint: 'City',
-                      icon: Icons.location_city_outlined,
-                      controller: _cityController,
+                      hint: 'Full Name',
+                      icon: Icons.person_outline,
+                      controller: _nameController,
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
-                    if (_isBusiness) ...[
-                      _InputField(
-                        hint: 'Business Name',
-                        icon: Icons.store_outlined,
-                        controller: _businessNameController,
-                      ),
-                      const SizedBox(height: 16),
-                      _InputField(
-                        hint: 'Business Category',
-                        icon: Icons.category_outlined,
-                        controller: _businessCategoryController,
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-
-                    // _InputField(
-                    //   hint: 'Email',
-                    //   icon: Icons.email_outlined,
-                    //   controller: _emailController,
-                    // ),
-                    const SizedBox(height: 16),
-
+                    /// 🎁 Promo Code
                     _InputField(
-                      hint: 'Set Password',
-                      icon: Icons.lock_outline,
-                      controller: _passwordController,
-                      obscure: true,
-                      onChanged: (v) {
-                        setState(() => _isPasswordValid = v.length >= 8);
-                      },
+                      hint: 'Promo Code (Optional)',
+                      icon: Icons.card_giftcard_outlined,
+                      controller: _promoController,
                     ),
-
-                    if (!_isPasswordValid &&
-                        _passwordController.text.isNotEmpty)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 6),
-                        child: Text(
-                          'Password must be at least 8 characters',
-                          style: TextStyle(color: Colors.red, fontSize: 12),
-                        ),
-                      ),
 
                     if (_error != null)
                       Padding(
@@ -295,7 +209,7 @@ class _SignupPageState extends State<SignupPage> {
 
                     const SizedBox(height: 30),
 
-                    /// SIGN UP BUTTON
+                    /// 🚀 SIGN UP BUTTON (Full Width Now)
                     Align(
                       alignment: Alignment.centerRight,
                       child: GestureDetector(
@@ -340,7 +254,12 @@ class _SignupPageState extends State<SignupPage> {
                     const SizedBox(height: 40),
 
                     TextButton(
-                      onPressed: () => context.go('/login'),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const LoginPage()),
+                        );
+                      },
                       child: const Text(
                         'Already have an account? Login',
                         style: TextStyle(color: Colors.grey),

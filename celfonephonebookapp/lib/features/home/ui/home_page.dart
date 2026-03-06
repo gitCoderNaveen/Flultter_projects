@@ -1,11 +1,17 @@
 import 'package:celfonephonebookapp/core/services/profile_service.dart';
+import 'package:celfonephonebookapp/core/services/supabase_service.dart';
 import 'package:celfonephonebookapp/features/home/controller/popular_firm_controller.dart';
+import 'package:celfonephonebookapp/features/home/model/directory_model.dart';
+import 'package:celfonephonebookapp/features/home/model/directory_service_model.dart';
+import 'package:celfonephonebookapp/features/home/model/play_book_model.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../controller/home_controller.dart';
 import '../service/home_service.dart';
 import 'dart:async';
+import '../service/directory_services.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -35,6 +41,7 @@ class _HomeView extends StatelessWidget {
           SliverToBoxAdapter(child: _Carousel(c)),
           SliverToBoxAdapter(child: _IndexFinder()),
           SliverToBoxAdapter(child: _PopularFirms()),
+          SliverToBoxAdapter(child: PlayBooksSection()),
         ],
       ),
     );
@@ -46,7 +53,7 @@ class _AnimatedHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return SliverAppBar(
       pinned: true,
-      expandedHeight: 160,
+      expandedHeight: 145,
       collapsedHeight: 80,
       elevation: 0,
       backgroundColor: Colors.transparent,
@@ -90,20 +97,64 @@ class _HeaderRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: Image.asset('images/ic_launcher.png', width: 36, height: 40),
-          ),
-          const SizedBox(width: 12),
           Expanded(
-            child: AnimatedDefaultTextStyle(
-              duration: const Duration(milliseconds: 300),
-              style: TextStyle(
-                color: color,
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 4,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: RichText(
+                      text: const TextSpan(
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        children: [
+                          TextSpan(
+                            text: "Cel",
+                            style: TextStyle(color: Colors.red),
+                          ),
+                          TextSpan(
+                            text: "fon",
+                            style: TextStyle(color: Colors.blue),
+                          ),
+                          TextSpan(
+                            text: " Book",
+                            style: TextStyle(color: Colors.black),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 2),
+
+                  const Text(
+                    "Connects For Growth",
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
               ),
-              child: const Text('Celfon Book', textAlign: TextAlign.center),
             ),
           ),
           Icon(Icons.notifications_none, color: color),
@@ -545,40 +596,67 @@ class _PopularFirms extends StatelessWidget {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
+
                 GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: c.firms.length,
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 4,
-                    childAspectRatio: 0.9,
+                    crossAxisCount: 3, // 👈 3 columns
+                    childAspectRatio: 0.85,
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
                   ),
                   itemBuilder: (_, index) {
                     final item = c.firms[index];
-                    return Column(
-                      children: [
-                        Container(
-                          height: 44,
-                          width: 44,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
+
+                    return InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => FullScreenImagePage(
+                              imageUrl:
+                                  item.redirectUrl, // 👈 backend redirect_url
+                            ),
                           ),
-                          child: Image.network(
-                            item.imageUrl,
-                            fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) =>
-                                const Icon(Icons.image_not_supported),
-                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade300),
+                          color: Colors.white,
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          item.title,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 13),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              height: 48,
+                              width: 48,
+                              child: Image.network(
+                                item.imageUrl,
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, __, ___) =>
+                                    const Icon(Icons.image_not_supported),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              item.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     );
                   },
                 ),
@@ -586,6 +664,303 @@ class _PopularFirms extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+// class DirectoryServices extends StatefulWidget {
+//   const DirectoryServices({Key? key}) : super(key: key);
+
+//   @override
+//   State<DirectoryServices> createState() => _DirectoryServicesState();
+// }
+
+// class _DirectoryServicesState extends State<DirectoryServices> {
+//   final SupabaseService supabaseService = SupabaseService();
+//   late Future<List<DirectoryModel>> futureTiles;
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     futureTiles = supabaseService.fetchTilesTitles();
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Padding(
+//       padding: const EdgeInsets.all(16),
+//       child: Column(
+//         crossAxisAlignment: CrossAxisAlignment.start,
+//         children: [
+//           const Text(
+//             "Online Directory Services",
+//             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+//           ),
+
+//           const SizedBox(height: 12),
+
+//           SizedBox(
+//             height: 180,
+//             child: FutureBuilder<List<DirectoryModel>>(
+//               future: futureTiles,
+//               builder: (context, snapshot) {
+//                 if (snapshot.connectionState == ConnectionState.waiting) {
+//                   return const Center(child: CircularProgressIndicator());
+//                 }
+
+//                 if (snapshot.hasError) {
+//                   return const Text("Error loading tiles");
+//                 }
+
+//                 final tiles = snapshot.data!;
+
+//                 return ListView.builder(
+//                   scrollDirection: Axis.horizontal,
+//                   itemCount: tiles.length,
+//                   itemBuilder: (context, index) {
+//                     return TileCard(tile: tiles[index]);
+//                   },
+//                 );
+//               },
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
+
+class TileCard extends StatelessWidget {
+  final DirectoryModel tile;
+
+  const TileCard({required this.tile});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        final encoded = Uri.encodeComponent(tile.imageKeywords);
+        context.push(
+          '/search?service=$encoded',
+        ); // Pass service title as query parameter
+      },
+      child: Container(
+        width: 160,
+        margin: const EdgeInsets.only(right: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          color: Colors.grey.shade200,
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black26,
+              blurRadius: 6,
+              offset: Offset(3, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            /// Gradient title
+            Container(
+              height: 60,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(22),
+                  topRight: Radius.circular(22),
+                  bottomLeft: Radius.circular(22),
+                  bottomRight: Radius.circular(22),
+                ),
+                gradient: LinearGradient(
+                  colors: [Color(0xff8E2DE2), Color(0xffF7971E)],
+                ),
+              ),
+              child: Text(
+                tile.title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            /// Supabase image
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Image.network(tile.image, fit: BoxFit.contain),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class PlayBooksSection extends StatefulWidget {
+  const PlayBooksSection({Key? key}) : super(key: key);
+
+  @override
+  State<PlayBooksSection> createState() => _PlayBooksSectionState();
+}
+
+class _PlayBooksSectionState extends State<PlayBooksSection> {
+  final SupabaseService supabaseService = SupabaseService();
+  late Future<List<PlayBookModel>> futureBooks;
+
+  @override
+  void initState() {
+    super.initState();
+    futureBooks = supabaseService.fetchPlayBooks(); // 👈 create this method
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "PlayBooks",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+
+          SizedBox(
+            height: 220,
+            child: FutureBuilder<List<PlayBookModel>>(
+              future: futureBooks,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError) {
+                  return const Text("Error loading PlayBooks");
+                }
+
+                final books = snapshot.data ?? [];
+
+                return ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: books.length,
+                  itemBuilder: (context, index) {
+                    return PlayBookCard(book: books[index]);
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class PlayBookCard extends StatelessWidget {
+  final PlayBookModel book;
+
+  const PlayBookCard({Key? key, required this.book}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () async {
+        final Uri url = Uri.parse(book.redirectUrl);
+
+        if (!await launchUrl(
+          url,
+          mode: LaunchMode.externalApplication, // 👈 Opens browser
+        )) {
+          throw Exception('Could not launch $url');
+        }
+      },
+      child: Container(
+        width: 140,
+        margin: const EdgeInsets.only(right: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: Colors.white,
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 6,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: 10),
+
+            /// Book Image
+            SizedBox(
+              height: 140,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  book.imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Icon(Icons.broken_image),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            /// Book Title
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Text(
+                book.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class FullScreenImagePage extends StatelessWidget {
+  final String imageUrl;
+
+  const FullScreenImagePage({super.key, required this.imageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          child: Image.network(
+            imageUrl,
+            fit: BoxFit.contain,
+            loadingBuilder: (_, child, progress) {
+              if (progress == null) return child;
+              return const CircularProgressIndicator();
+            },
+            errorBuilder: (_, __, ___) =>
+                const Icon(Icons.broken_image, color: Colors.white, size: 60),
+          ),
+        ),
       ),
     );
   }

@@ -54,7 +54,7 @@ class SubscriptionPage extends StatelessWidget {
   void _pay(BuildContext context, dynamic plan) async {
     final uri = Uri.parse(
       'upi://pay'
-      '?pa=yourupi@bank'
+      '?pa=naveenbsc.mca1518-1@okicici'
       '&pn=Celfon5G'
       '&am=${plan['price']}'
       '&cu=INR'

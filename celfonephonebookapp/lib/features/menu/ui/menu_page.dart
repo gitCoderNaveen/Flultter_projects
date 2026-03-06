@@ -1,6 +1,5 @@
 import 'package:celfonephonebookapp/features/analytics/payments_page.dart';
 import 'package:celfonephonebookapp/features/analytics/search_logs_page.dart';
-import 'package:celfonephonebookapp/features/analytics/subscriptions_page.dart';
 import 'package:celfonephonebookapp/features/analytics/user_sessions_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -14,7 +13,7 @@ class MenuPage extends StatelessWidget {
     final user = Supabase.instance.client.auth.currentUser;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Menu')),
+      appBar: AppBar(title: const _HeaderRow(collapsed: true)),
       body: ListView(
         children: [
           /// Profile (only if logged in)
@@ -26,12 +25,11 @@ class MenuPage extends StatelessWidget {
             ),
 
           /// Subscriptions (optional: you may keep public or gated)
-          ListTile(
-            leading: const Icon(Icons.workspace_premium),
-            title: const Text('Subscriptions'),
-            onTap: () => context.push('/subscription'),
-          ),
-
+          // ListTile(
+          //   leading: const Icon(Icons.workspace_premium),
+          //   title: const Text('Subscriptions'),
+          //   onTap: () => context.push('/subscription'),
+          // ),
           const Divider(),
 
           /// 🔑 AUTH ACTION (LOGIN / LOGOUT)
@@ -54,35 +52,106 @@ class MenuPage extends StatelessWidget {
 
           // Analytics
           ListTile(
+            leading: const Icon(Icons.search),
+            title: const Text('Reverse Number Finder'),
+            onTap: () => context.push('/reverse_number_finder'),
+          ),
+          ListTile(
             leading: const Icon(Icons.analytics),
-            title: const Text('Search Analytics'),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SearchLogsPage()),
-            ),
+            title: const Text('Subscription Plans'),
+            onTap: () => context.push('/subscription'),
           ),
           ListTile(
-            leading: const Icon(Icons.payment),
-            title: const Text('Payments'),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const PaymentsPage()),
-            ),
+            leading: const Icon(Icons.badge),
+            title: const Text('Combo Offers'),
+            onTap: () => context.push('/combo_offers'),
           ),
-          ListTile(
-            leading: const Icon(Icons.workspace_premium),
-            title: const Text('Subscription'),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SubscriptionsPage()),
-            ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.trending_up),
-            title: const Text('Leads & Views'),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const UserSessionsPage()),
+          // ListTile(
+          //   leading: const Icon(Icons.workspace_premium),
+          //   title: const Text('Subscription'),
+          //   onTap: () => context.push('/subscription'),
+          // ),
+          // ListTile(
+          //   leading: const Icon(Icons.trending_up),
+          //   title: const Text('Leads & Views'),
+          //   onTap: () => context.push('/user_sessions'),
+          // ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeaderRow extends StatelessWidget {
+  final bool collapsed;
+  const _HeaderRow({required this.collapsed});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = collapsed ? Colors.black : Colors.white;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 4,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: RichText(
+                      text: const TextSpan(
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        children: [
+                          TextSpan(
+                            text: "Cel",
+                            style: TextStyle(color: Colors.red),
+                          ),
+                          TextSpan(
+                            text: "fon",
+                            style: TextStyle(color: Colors.blue),
+                          ),
+                          TextSpan(
+                            text: " Book",
+                            style: TextStyle(color: Colors.black),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 2),
+
+                  const Text(
+                    "Connects For Growth",
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

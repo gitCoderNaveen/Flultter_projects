@@ -1,12 +1,13 @@
-enum SearchFilter { business, products }
+enum SearchFilter {
+  business,
+  products;
 
-extension SearchFilterX on SearchFilter {
   String get label {
     switch (this) {
       case SearchFilter.business:
-        return 'Business';
+        return "Business";
       case SearchFilter.products:
-        return 'Products';
+        return "Product";
     }
   }
 }

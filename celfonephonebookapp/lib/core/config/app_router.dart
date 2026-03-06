@@ -1,6 +1,22 @@
 import 'package:celfonephonebookapp/features/admin/ui/admin_dashboard_page.dart';
-import 'package:celfonephonebookapp/features/partner/ui/partners.dart';
+import 'package:celfonephonebookapp/features/analytics/search_logs_page.dart';
+import 'package:celfonephonebookapp/features/analytics/user_sessions_page.dart';
+import 'package:celfonephonebookapp/features/combo_offer/view/combo_offer_page.dart';
+import 'package:celfonephonebookapp/features/favorites/view/favorite_page.dart';
+import 'package:celfonephonebookapp/features/model/ui/business_model_page.dart';
+import 'package:celfonephonebookapp/features/model/ui/free_model.dart';
+import 'package:celfonephonebookapp/features/model/ui/model_page.dart';
+import 'package:celfonephonebookapp/features/partner/features/earning_details/ui/earning_details_page.dart';
+import 'package:celfonephonebookapp/features/partner/features/media_partner/ui/media_partner_page.dart';
+import 'package:celfonephonebookapp/features/partner/ui/partner_page.dart';
 import 'package:celfonephonebookapp/features/profile/ui/profile_page.dart';
+import 'package:celfonephonebookapp/features/profile/ui/profile_screen.dart';
+import 'package:celfonephonebookapp/features/promotions/features/categorywisepromotions/ui/categorywise_pro_page.dart';
+import 'package:celfonephonebookapp/features/promotions/features/nearbypromotions/ui/nearbypromotion_page.dart';
+import 'package:celfonephonebookapp/features/promotions/ui/promotion_page.dart';
+import 'package:celfonephonebookapp/features/reverse_number_finder/view/reverse_number_finder_page.dart';
+import 'package:celfonephonebookapp/features/subscription/ui/subscription_dashboard.dart';
+import 'package:celfonephonebookapp/features/subscription/ui/subscription_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:celfonephonebookapp/core/config/app_storage.dart';
@@ -11,7 +27,6 @@ import 'package:celfonephonebookapp/features/home/ui/home_shell.dart';
 import 'package:celfonephonebookapp/features/menu/ui/menu_page.dart';
 import 'package:celfonephonebookapp/features/onboarding/ui/onboarding_screen.dart';
 import 'package:celfonephonebookapp/features/profile/ui/profile_completion_page.dart';
-import 'package:celfonephonebookapp/features/promotions/ui/promotions_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:celfonephonebookapp/core/enums/user_type.dart';
 import '../../features/home/ui/home_page.dart';
@@ -102,7 +117,7 @@ class AppRouter {
           ),
           GoRoute(
             path: '/partner',
-            pageBuilder: (context, state) => _slidePage(PartnersPage()),
+            pageBuilder: (context, state) => _slidePage(PartnerPage()),
           ),
           GoRoute(
             path: '/menu',
@@ -111,12 +126,85 @@ class AppRouter {
           GoRoute(
             path: '/profile',
             pageBuilder: (context, state) =>
-                AppRouter._slidePage(const ProfilePage()),
+                AppRouter._slidePage(const ProfileScreen()),
           ),
           GoRoute(
             path: '/search',
             pageBuilder: (context, state) =>
                 AppRouter._slidePage(const SearchPage()),
+          ),
+          GoRoute(
+            path: '/media-partner',
+            pageBuilder: (context, state) =>
+                AppRouter._slidePage(const MediaPartnerPage()),
+          ),
+          GoRoute(
+            path: '/favorites',
+            pageBuilder: (context, state) =>
+                AppRouter._slidePage(const FavoritePage()),
+          ),
+          GoRoute(
+            path: '/nearby-promotion',
+            pageBuilder: (context, state) =>
+                AppRouter._slidePage(const NearbyPromotionPage()),
+          ),
+          GoRoute(
+            path: '/category-promotion',
+            pageBuilder: (context, state) =>
+                AppRouter._slidePage(const CategorywiseProPage()),
+          ),
+          GoRoute(
+            path: '/model_page',
+            builder: (context, state) {
+              final profileId = state.extra as String;
+
+              return ModelPage(profileId: profileId); // ← works now
+            },
+          ),
+          GoRoute(
+            path: '/business_model',
+            builder: (context, state) {
+              final profileId = state.extra as String;
+
+              return BusinessModel(profileId: profileId); // ← works now
+            },
+          ),
+          GoRoute(
+            path: '/free_model',
+            builder: (context, state) {
+              final profileId = state.extra as String;
+
+              return FreeModel(profileId: profileId); // ← works now
+            },
+          ),
+          GoRoute(
+            path: '/subscription',
+            pageBuilder: (context, state) =>
+                AppRouter._slidePage(SubscriptionDashboard()),
+          ),
+          GoRoute(
+            path: '/user_sessions',
+            pageBuilder: (context, state) =>
+                AppRouter._slidePage(UserSessionsPage()),
+          ),
+          GoRoute(
+            path: '/search_logs',
+            pageBuilder: (context, state) =>
+                AppRouter._slidePage(SearchLogsPage()),
+          ),
+          GoRoute(
+            path: '/earning_page',
+            builder: (context, state) => const EarningDetailsPage(),
+          ),
+          GoRoute(
+            path: '/reverse_number_finder',
+            pageBuilder: (context, state) =>
+                _slidePage(const ReverseNumberFinderPage()),
+          ),
+          GoRoute(
+            path: '/combo_offers',
+            pageBuilder: (context, state) =>
+                AppRouter._slidePage(ComboOfferPage()),
           ),
         ],
       ),

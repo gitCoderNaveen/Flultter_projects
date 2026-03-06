@@ -1,6 +1,6 @@
 import 'package:celfonephonebookapp/core/services/auth_service.dart';
 import 'package:celfonephonebookapp/features/auth/ui/signup_page.dart';
-import 'package:celfonephonebookapp/features/home/ui/home_page.dart';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -121,6 +121,7 @@ class _LoginPageState extends State<LoginPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   children: [
+
                     _InputField(
                       hint: 'Mobile Number',
                       icon: Icons.phone_outlined,

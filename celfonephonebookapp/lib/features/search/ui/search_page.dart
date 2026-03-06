@@ -1,9 +1,9 @@
-import 'package:celfonephonebookapp/core/constants/db_tables.dart';
-import 'package:celfonephonebookapp/features/search/ui/search_result_card.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../model/search_filter.dart';
+import '../ui/search_result_card.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -13,29 +13,54 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
-  final _controller = TextEditingController();
   final supabase = Supabase.instance.client;
+
+  final _businessController = TextEditingController();
+  final _productController = TextEditingController();
+
+  SearchFilter _filter = SearchFilter.business;
 
   bool _loading = false;
   List<dynamic> _results = [];
 
-  SearchFilter _filter = SearchFilter.business;
+  bool _initialized = false;
 
   @override
-  void initState() {
-    super.initState();
-    _fetchAllDefault();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    if (_initialized) return;
+    _initialized = true;
+
+    final uri = GoRouterState.of(context).uri;
+    final params = uri.queryParameters;
+
+    if (params.containsKey('service')) {
+      _productController.text = params['service']!;
+      _filter = SearchFilter.products;
+      _search(params['service']!);
+      return;
+    }
+
+    if (params.containsKey('letter')) {
+      _searchByLetter(params['letter']!);
+      return;
+    }
+
+    _fetchDefault();
   }
 
-  // 🔹 Default fetch
-  Future<void> _fetchAllDefault() async {
+  /// default fetch
+  Future<void> _fetchDefault() async {
     setState(() => _loading = true);
 
     final res = await supabase
-        .from(DbTables.profiles)
+        .from('profiles')
         .select()
         .order('is_prime', ascending: false)
-        .order('priority', ascending: false);
+        .order('priority', ascending: false)
+        .order('normal_list', ascending: false)
+        .order('is_business', ascending: false);
 
     setState(() {
       _results = res;
@@ -43,24 +68,10 @@ class _SearchPageState extends State<SearchPage> {
     });
   }
 
-  Future<void> logSearch({
-    required String query,
-    required String filter,
-  }) async {
-    final user = Supabase.instance.client.auth.currentUser;
-    if (user == null) return;
-
-    await Supabase.instance.client.from('search_logs').insert({
-      'user_id': user.id,
-      'query': query,
-      'filter': filter, // business / product / city
-    });
-  }
-
-  // 🔍 Filtered search
+  /// search
   Future<void> _search(String query) async {
     if (query.trim().isEmpty) {
-      _fetchAllDefault();
+      _fetchDefault();
       return;
     }
 
@@ -70,13 +81,10 @@ class _SearchPageState extends State<SearchPage> {
 
     String condition;
 
-    switch (_filter) {
-      case SearchFilter.business:
-        condition = 'business_name.ilike.%$query%,person_name.ilike.%$query%';
-        break;
-      case SearchFilter.products:
-        condition = 'keywords.ilike.%$query%';
-        break;
+    if (_filter == SearchFilter.business) {
+      condition = 'business_name.ilike.%$query%,person_name.ilike.%$query%';
+    } else {
+      condition = 'keywords.ilike.%$query%';
     }
 
     final res = await supabase
@@ -84,87 +92,239 @@ class _SearchPageState extends State<SearchPage> {
         .select()
         .or(condition)
         .order('is_prime', ascending: false)
-        .order('priority', ascending: false);
+        .order('priority', ascending: false)
+        .order('normal_list', ascending: false)
+        .order('is_business', ascending: false);
 
     setState(() {
       _results = res;
       _loading = false;
     });
-    logSearch(query: query, filter: _filter.name);
+
+    _logSearch(query, _filter.name);
   }
 
-  // search log
+  Future<void> _searchByLetter(String letter) async {
+    setState(() => _loading = true);
 
-  // 🔹 Filter Picker
-  void _showFilterPicker() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: SearchFilter.values.map((f) {
-          return ListTile(
-            title: Text(f.label),
-            trailing: f == _filter
-                ? const Icon(Icons.check, color: Colors.green)
-                : null,
-            onTap: () {
-              setState(() => _filter = f);
-              Navigator.pop(context);
-              _search(_controller.text);
-            },
-          );
-        }).toList(),
-      ),
+    final res = await supabase
+        .from('profiles')
+        .select()
+        .ilike('business_name', '${letter.toUpperCase()}%')
+        .order('is_prime', ascending: false)
+        .order('priority', ascending: false)
+        .order('normal_list', ascending: false)
+        .order('is_business', ascending: false);
+
+    setState(() {
+      _results = res;
+      _loading = false;
+    });
+  }
+
+  Future<void> _logSearch(String query, String filter) async {
+    final user = supabase.auth.currentUser;
+
+    if (user == null) return;
+
+    await supabase.from('search_logs').insert({
+      'user_id': user.id,
+      'query': query,
+      'filter': filter,
+    });
+  }
+
+  /// SEARCH BARS UI
+  Widget _buildSearchBars() {
+    final isBusiness = _filter == SearchFilter.business;
+
+    return Row(
+      children: [
+        /// BUSINESS SEARCH
+        Expanded(
+          flex: isBusiness ? 8 : 2,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            height: 45,
+            child: TextField(
+              controller: _businessController,
+
+              onTap: () {
+                setState(() {
+                  _filter = SearchFilter.business;
+                });
+              },
+
+              onChanged: (value) {
+                setState(() {
+                  _filter = SearchFilter.business;
+                });
+
+                _search(value);
+              },
+
+              decoration: InputDecoration(
+                hintText: "Business search",
+
+                filled: true,
+                fillColor: Colors.grey.shade200,
+
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        const SizedBox(width: 8),
+
+        /// PRODUCT SEARCH
+        Expanded(
+          flex: isBusiness ? 2 : 8,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            height: 45,
+            child: TextField(
+              controller: _productController,
+
+              onTap: () {
+                setState(() {
+                  _filter = SearchFilter.products;
+                });
+              },
+
+              onChanged: (value) {
+                setState(() {
+                  _filter = SearchFilter.products;
+                });
+
+                _search(value);
+              },
+
+              decoration: InputDecoration(
+                hintText: "Product search",
+
+                filled: true,
+                fillColor: Colors.grey.shade200,
+
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Search')),
+      appBar: AppBar(title: const _HeaderRow(collapsed: true)),
+
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    onChanged: _search,
-                    decoration: InputDecoration(
-                      hintText: 'Search ${_filter.label}',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.filter_list),
-                  onPressed: _showFilterPicker,
-                ),
-              ],
-            ),
-          ),
+          Padding(padding: const EdgeInsets.all(16), child: _buildSearchBars()),
 
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : _results.isEmpty
-                ? const Center(child: Text('No results found'))
+                ? const Center(child: Text("No results"))
                 : ListView.builder(
                     itemCount: _results.length,
-                    itemBuilder: (_, i) => SearchResultCard(
-                      item: _results[i],
-                      filter: _filter, // 👈 pass selected filter
+
+                    itemBuilder: (_, i) {
+                      return SearchResultCard(
+                        item: _results[i],
+                        filter: _filter,
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeaderRow extends StatelessWidget {
+  final bool collapsed;
+  const _HeaderRow({required this.collapsed});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = collapsed ? Colors.black : Colors.white;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 4,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: RichText(
+                      text: const TextSpan(
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        children: [
+                          TextSpan(
+                            text: "Cel",
+                            style: TextStyle(color: Colors.red),
+                          ),
+                          TextSpan(
+                            text: "fon",
+                            style: TextStyle(color: Colors.blue),
+                          ),
+                          TextSpan(
+                            text: " Book",
+                            style: TextStyle(color: Colors.black),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
+
+                  const SizedBox(height: 2),
+
+                  const Text(
+                    "Connects For Growth",
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
