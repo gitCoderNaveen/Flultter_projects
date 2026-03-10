@@ -1,5 +1,6 @@
 import 'package:celfonephonebookapp/core/services/profile_service.dart';
 import 'package:celfonephonebookapp/core/services/supabase_service.dart';
+import 'package:celfonephonebookapp/features/categories/widgets/home_categories_section.dart';
 import 'package:celfonephonebookapp/features/home/controller/popular_firm_controller.dart';
 import 'package:celfonephonebookapp/features/home/model/directory_model.dart';
 import 'package:celfonephonebookapp/features/home/model/directory_service_model.dart';
@@ -40,6 +41,7 @@ class _HomeView extends StatelessWidget {
           SliverToBoxAdapter(child: _Greeting()),
           SliverToBoxAdapter(child: _Carousel(c)),
           SliverToBoxAdapter(child: _IndexFinder()),
+          SliverToBoxAdapter(child: HomeCategoriesSection()),
           SliverToBoxAdapter(child: _PopularFirms()),
           SliverToBoxAdapter(child: PlayBooksSection()),
         ],
