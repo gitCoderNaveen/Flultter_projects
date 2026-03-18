@@ -41,7 +41,7 @@ class _HomeView extends StatelessWidget {
           SliverToBoxAdapter(child: _Greeting()),
           SliverToBoxAdapter(child: _Carousel(c)),
           SliverToBoxAdapter(child: _IndexFinder()),
-          SliverToBoxAdapter(child: HomeCategoriesSection()),
+          // SliverToBoxAdapter(child: HomeCategoriesSection()),
           SliverToBoxAdapter(child: _PopularFirms()),
           SliverToBoxAdapter(child: PlayBooksSection()),
         ],

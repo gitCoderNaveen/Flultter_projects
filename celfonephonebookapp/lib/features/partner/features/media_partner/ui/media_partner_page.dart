@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class MediaPartnerPage extends StatefulWidget {
   const MediaPartnerPage({super.key});
@@ -328,6 +329,128 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
     );
   }
 
+  void _showSharePopup(String mobile) {
+    String nameText = isPersonTab
+        ? "$selectedPrefix ${_personNameController.text.trim()}"
+        : "M/s. ${_businessNameController.text.trim()}";
+
+    String businessName = _businessNameController.text.trim();
+    String link =
+        "https://play.google.com/store/apps/details?id=com.celfonphonebookapp&pcampaignid=web_share";
+    String keywords = _productInputController.text.trim();
+    String profession = _professionController.text.trim();
+
+    TextEditingController messageController = TextEditingController(
+      text: isPersonTab
+          ? "Dear $nameText CELFON BOOK is a mobile App, with profiles of Laks of mobile users. Your Details are also added in it based on field survey online data, You are listed under your profession ${profession}. Kindly verify your details by listing CELFON BOOK ap at ${link} "
+          : "Dear $nameText CELFON BOOK is a mobile App, with profiles of Laks of mobile users. Your Firm ${businessName} is also added in it based field survay online data. You are listed under keywords ${keywords}. Kindly verify your details by listing CELFON BOOK ap at ${link}",
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Share Contact"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: messageController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: "Message",
+                ),
+              ),
+              const SizedBox(height: 15),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  /// WhatsApp
+                  // GestureDetector(
+                  //   onTap: () async {
+                  //     final message = Uri.encodeComponent(
+                  //       messageController.text,
+                  //     );
+                  //     final phone = _mobileController.text.trim();
+
+                  //     final url = Uri.parse(
+                  //       "https://wa.me/$phone?text=$message",
+                  //     );
+
+                  //     if (await canLaunchUrl(url)) {
+                  //       await launchUrl(url);
+                  //     }
+                  //   },
+                  //   child: Image.asset(
+                  //     'images/whats_app.png',
+                  //     height: 45,
+                  //     width: 45,
+                  //   ),
+                  // ),
+
+                  /// SMS
+                  GestureDetector(
+                    onTap: () async {
+                      final message = Uri.encodeComponent(
+                        messageController.text,
+                      );
+                      final mobileNumber = mobile;
+
+                      if (mobileNumber.isEmpty) {
+                        _showSnackBar(
+                          "Mobile number not available",
+                          Colors.red,
+                        );
+                        return;
+                      }
+
+                      final Uri smsUri = Uri.parse(
+                        "sms:$mobileNumber?body=$message",
+                      );
+
+                      if (await canLaunchUrl(smsUri)) {
+                        await launchUrl(smsUri);
+
+                        // Close popup after SMS app opens
+                        Navigator.pop(context);
+                      }
+                    },
+                    child: Image.asset('images/sms.png', height: 45, width: 45),
+                  ),
+
+                  /// Mail
+                  // GestureDetector(
+                  //   onTap: () async {
+                  //     final message = Uri.encodeComponent(
+                  //       messageController.text,
+                  //     );
+                  //     final email = _emailController.text.trim();
+
+                  //     final url = Uri.parse(
+                  //       "mailto:$email?subject=Contact&body=$message",
+                  //     );
+
+                  //     if (await canLaunchUrl(url)) {
+                  //       await launchUrl(url);
+                  //     }
+                  //   },
+                  //   child: Image.asset(
+                  //     'images/email.png',
+                  //     height: 45,
+                  //     width: 45,
+                  //   ),
+                  // ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _validateAndSave() async {
     if (!_formKey.currentState!.validate()) return;
     if (contactType == 'Mobile' &&
@@ -438,6 +561,9 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
       }, onConflict: 'user_id,entry_date');
 
       _showSnackBar("Details saved successfully!", const Color(0xFF1F8EB6));
+      final mobile = _mobileController.text.trim();
+      _showSharePopup(mobile);
+
       _clearForm();
     } catch (e) {
       _showSnackBar("Error: ${e.toString()}", Colors.redAccent);

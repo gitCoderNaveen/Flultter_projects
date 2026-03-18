@@ -1,17 +1,25 @@
 import 'package:celfonephonebookapp/core/services/auth_service.dart';
-import 'package:celfonephonebookapp/core/services/supabase_service.dart';
 import 'package:celfonephonebookapp/features/favorites/controller/favorite_controller.dart';
 import 'package:celfonephonebookapp/features/favorites/view/favorite_dialog.dart';
+import 'package:celfonephonebookapp/features/search/ui/discount_greeting_card.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../model/search_filter.dart';
+import 'package:celfonephonebookapp/features/search/service/discount_greeting_service.dart';
 
 class SearchResultCard extends StatelessWidget {
   final Map item;
   final SearchFilter filter;
+  final String searchQuery;
+  final DiscountGreetingService _discountService = DiscountGreetingService();
 
-  const SearchResultCard({super.key, required this.item, required this.filter});
+  SearchResultCard({
+    super.key,
+    required this.item,
+    required this.filter,
+    required this.searchQuery,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -20,14 +28,39 @@ class SearchResultCard extends StatelessWidget {
     final bool discount = item['discount'] ?? false;
     final bool normal = item['normal_list'] ?? false;
 
-    final String name =
-        (item['business_name'] != null &&
-            item['business_name'].toString().trim().isNotEmpty)
-        ? item['business_name']
-        : (item['person_name'] ?? "");
+    final String personName = item['person_name'] ?? "";
+    final String businessName = item['business_name'] ?? "";
 
-    final String mobileRaw = item['mobile_number'] ?? "";
-    final String mobile = _formatMobile(mobileRaw);
+    String name;
+
+    if (searchQuery.trim().isEmpty) {
+      // Default view
+      name = businessName.isNotEmpty ? businessName : personName;
+    } else if (personName.toLowerCase().contains(searchQuery.toLowerCase())) {
+      // Search matched person name
+      name = personName;
+    } else {
+      // Otherwise show business
+      name = businessName.isNotEmpty ? businessName : personName;
+    }
+
+    final String mobileNumber = item['mobile_number'] ?? "";
+    final String landline = item['landline'] ?? "";
+    final String landlineCode = item['landline_code'] ?? "";
+
+    String mobileRaw;
+    String mobile;
+
+    if (mobileNumber.isNotEmpty) {
+      mobileRaw = mobileNumber;
+      mobile = _formatMobile(mobileNumber);
+    } else if (landline.isNotEmpty) {
+      mobileRaw = "$landlineCode$landline";
+      mobile = _formatLandline(mobileRaw);
+    } else {
+      mobileRaw = "";
+      mobile = "";
+    }
 
     final String city = item['city'] ?? "";
     final String product = _extractProduct(item['keywords']);
@@ -39,10 +72,10 @@ class SearchResultCard extends StatelessWidget {
 
     if (isPrime) {
       bgColor = Colors.white;
-      borderColor = Colors.orange;
+      borderColor = Colors.red;
     } else if (isBusiness) {
       bgColor = Colors.white;
-      borderColor = Colors.pink;
+      borderColor = Colors.green;
     } else if (normal) {
       borderColor = Colors.blue;
     }
@@ -68,7 +101,7 @@ class SearchResultCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: borderColor, width: 3),
+          border: Border.all(color: borderColor, width: 6),
         ),
         child: Row(
           children: [
@@ -87,7 +120,7 @@ class SearchResultCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: 14,
+                            fontSize: 18,
                           ),
                         ),
                       ),
@@ -103,19 +136,44 @@ class SearchResultCard extends StatelessWidget {
                         ),
 
                       if (discount)
-                        Container(
-                          margin: const EdgeInsets.only(left: 4),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 5,
-                            vertical: 1,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Text(
-                            "Discount",
-                            style: TextStyle(color: Colors.white, fontSize: 9),
+                        GestureDetector(
+                          onTap: () async {
+                            final discountId = item['id'].toString();
+
+                            /// save discount view
+                            await _discountService.saveDiscountView(discountId);
+
+                            /// fetch discount card
+                            final card = await _discountService
+                                .fetchGreetingCard(discountId);
+
+                            if (card != null && context.mounted) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      DiscountGreetingCardWidget(card: card),
+                                ),
+                              );
+                            }
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.only(left: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 5,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              "Discount",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                              ),
+                            ),
                           ),
                         ),
                     ],
@@ -124,14 +182,14 @@ class SearchResultCard extends StatelessWidget {
                   const SizedBox(height: 2),
 
                   /// MOBILE
-                  Text(mobile, style: const TextStyle(fontSize: 12)),
+                  Text(mobile, style: const TextStyle(fontSize: 14)),
 
                   /// CITY / PRODUCT
                   Text(
                     subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12),
+                    style: const TextStyle(fontSize: 14),
                   ),
                 ],
               ),
@@ -238,9 +296,9 @@ class SearchResultCard extends StatelessWidget {
   /// ENQUIRY DIALOG (unchanged)
   void _showEnquiryDialog(BuildContext context) {
     const String defaultMessage =
-        "I Saw Your Listing in SIGNPOST PHONE BOOK. "
+        "I Saw Your Listing in CELFON BOOK. "
         "I am Interested in your Products. Please Send Details/Call Me. "
-        "(Sent Through Signpost PHONE BOOK)";
+        "(Sent Through Signpost CELFON BOOK)";
     final TextEditingController controller = TextEditingController(
       text: defaultMessage,
     );
@@ -273,7 +331,7 @@ class SearchResultCard extends StatelessWidget {
                     onTap: () {
                       final msg = controller.text;
                       final url =
-                          "https://wa.me/$mobile?text=${Uri.encodeComponent(msg)}";
+                          "https://wa.me/+91$mobile?text=${Uri.encodeComponent(msg)}";
                       launchUrl(Uri.parse(url));
                     },
                   ),
@@ -354,6 +412,11 @@ class SearchResultCard extends StatelessWidget {
   String _formatMobile(String mobile) {
     if (mobile.length != 10) return mobile;
     return "${mobile.substring(0, 5)} XXXXX";
+  }
+
+  String _formatLandline(String landline) {
+    if (landline.length < 5) return landline;
+    return landline.substring(0, 2) + " XXXXX";
   }
 
   String _extractProduct(dynamic keywords) {

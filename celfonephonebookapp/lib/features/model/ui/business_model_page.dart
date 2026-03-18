@@ -99,11 +99,14 @@ class _BusinessModelState extends State<BusinessModel> {
                         : profile!.personName,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 18,
+                      fontSize: 22,
                     ),
                   ),
 
-                  subtitle: Text(profile!.keywords),
+                  subtitle: Text(
+                    profile!.keywords,
+                    style: const TextStyle(fontSize: 16),
+                  ),
 
                   /// Favorite Button on Right
                   trailing: InkWell(
@@ -215,7 +218,7 @@ class _BusinessModelState extends State<BusinessModel> {
                               final msg =
                                   "Hello, I found your profile in the app.";
                               final url =
-                                  "https://wa.me/$mobile?text=${Uri.encodeComponent(msg)}";
+                                  "https://wa.me/+91$mobile?text=${Uri.encodeComponent(msg)}";
                               launchUrl(Uri.parse(url));
                             },
                           ),
@@ -454,7 +457,7 @@ class _BusinessModelState extends State<BusinessModel> {
         children: [
           Icon(icon, size: 20, color: Theme.of(context).primaryColor),
           const SizedBox(width: 10),
-          Expanded(child: Text(value, style: const TextStyle(fontSize: 14))),
+          Expanded(child: Text(value, style: const TextStyle(fontSize: 16))),
         ],
       ),
     );

@@ -3,11 +3,14 @@ import 'package:celfonephonebookapp/features/analytics/search_logs_page.dart';
 import 'package:celfonephonebookapp/features/analytics/user_sessions_page.dart';
 import 'package:celfonephonebookapp/features/combo_offer/view/combo_offer_page.dart';
 import 'package:celfonephonebookapp/features/favorites/view/favorite_page.dart';
+import 'package:celfonephonebookapp/features/menu/features/about_us.dart';
+import 'package:celfonephonebookapp/features/menu/features/contact_us.dart';
 import 'package:celfonephonebookapp/features/model/ui/business_model_page.dart';
 import 'package:celfonephonebookapp/features/model/ui/free_model.dart';
 import 'package:celfonephonebookapp/features/model/ui/model_page.dart';
 import 'package:celfonephonebookapp/features/partner/features/earning_details/ui/earning_details_page.dart';
 import 'package:celfonephonebookapp/features/partner/features/media_partner/ui/media_partner_page.dart';
+import 'package:celfonephonebookapp/features/partner/features/media_partner_guide.dart';
 import 'package:celfonephonebookapp/features/partner/ui/partner_page.dart';
 import 'package:celfonephonebookapp/features/profile/ui/profile_page.dart';
 import 'package:celfonephonebookapp/features/profile/ui/profile_screen.dart';
@@ -205,6 +208,21 @@ class AppRouter {
             path: '/combo_offers',
             pageBuilder: (context, state) =>
                 AppRouter._slidePage(ComboOfferPage()),
+          ),
+          GoRoute(
+            path: '/about_us',
+            pageBuilder: (context, state) =>
+                AppRouter._slidePage(AboutUsPage()),
+          ),
+          GoRoute(
+            path: '/media-partner-guide',
+            pageBuilder: (context, state) =>
+                AppRouter._slidePage(MediaPartnerGuidePage()),
+          ),
+          GoRoute(
+            path: '/contact_us',
+            pageBuilder: (context, state) =>
+                AppRouter._slidePage(ContactUsPage()),
           ),
         ],
       ),

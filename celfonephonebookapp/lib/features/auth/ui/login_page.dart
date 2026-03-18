@@ -16,6 +16,7 @@ class _LoginPageState extends State<LoginPage> {
   final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
   final _authService = AuthService();
+  bool _isPasswordVisible = false;
 
   bool _loading = false;
   String? _error;
@@ -121,6 +122,21 @@ class _LoginPageState extends State<LoginPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   children: [
+                    /// 🔁 Signup Redirect
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const SignupPage()),
+                        );
+                      },
+                      child: const Text(
+                        'Create a New Account Now (If Already Not Registered.)',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.red),
+                      ),
+                    ),
 
                     _InputField(
                       hint: 'Mobile Number',
@@ -133,7 +149,19 @@ class _LoginPageState extends State<LoginPage> {
                       hint: 'Password',
                       icon: Icons.lock_outline,
                       controller: _passwordController,
-                      obscure: true,
+                      obscure: !_isPasswordVisible,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _isPasswordVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _isPasswordVisible = !_isPasswordVisible;
+                          });
+                        },
+                      ),
                     ),
 
                     const SizedBox(height: 8),
@@ -206,20 +234,6 @@ class _LoginPageState extends State<LoginPage> {
                     ),
 
                     const SizedBox(height: 40),
-
-                    /// 🔁 Signup Redirect
-                    TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const SignupPage()),
-                        );
-                      },
-                      child: const Text(
-                        'Create new account',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -234,15 +248,17 @@ class _LoginPageState extends State<LoginPage> {
 /// 🔹 Reusable Input Field
 class _InputField extends StatelessWidget {
   final String hint;
+  final IconData icon;
   final TextEditingController controller;
   final bool obscure;
-  final IconData icon;
+  final Widget? suffixIcon;
 
   const _InputField({
     required this.hint,
-    required this.controller,
     required this.icon,
+    required this.controller,
     this.obscure = false,
+    this.suffixIcon,
   });
 
   @override
@@ -252,17 +268,9 @@ class _InputField extends StatelessWidget {
       obscureText: obscure,
       decoration: InputDecoration(
         hintText: hint,
-        prefixIcon: Icon(icon, color: Colors.grey),
-        filled: true,
-        fillColor: Colors.grey.shade100,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 18,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide.none,
-        ),
+        prefixIcon: Icon(icon),
+        suffixIcon: suffixIcon,
+        border: OutlineInputBorder(),
       ),
     );
   }

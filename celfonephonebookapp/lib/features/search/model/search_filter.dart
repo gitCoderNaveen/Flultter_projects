@@ -1,6 +1,7 @@
 enum SearchFilter {
   business,
-  products;
+  products,
+  city;
 
   String get label {
     switch (this) {
@@ -8,6 +9,8 @@ enum SearchFilter {
         return "Business";
       case SearchFilter.products:
         return "Product";
+      case SearchFilter.city:
+        return "city";
     }
   }
 }

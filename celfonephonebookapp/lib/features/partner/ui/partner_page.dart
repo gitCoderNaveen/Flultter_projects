@@ -60,59 +60,58 @@ class _PartnerPageState extends State<PartnerPage> {
 
           return CustomScrollView(
             slivers: [
-              SliverAppBar(
-                expandedHeight: 200,
-                backgroundColor: darkSlate,
-                pinned: true,
+              // SliverAppBar(
+              //   expandedHeight: 200,
+              //   backgroundColor: darkSlate,
+              //   pinned: true,
 
-                flexibleSpace: FlexibleSpaceBar(
-                  background: Container(
-                    padding: const EdgeInsets.all(20),
+              //   flexibleSpace: FlexibleSpaceBar(
+              //     background: Container(
+              //       padding: const EdgeInsets.all(20),
 
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [darkSlate, primaryDark],
-                      ),
-                    ),
+              //       decoration: const BoxDecoration(
+              //         gradient: LinearGradient(
+              //           colors: [darkSlate, primaryDark],
+              //         ),
+              //       ),
 
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              //       child: Column(
+              //         mainAxisAlignment: MainAxisAlignment.end,
+              //         crossAxisAlignment: CrossAxisAlignment.start,
 
-                      children: [
-                        const CircleAvatar(
-                          radius: 28,
-                          backgroundColor: Colors.white24,
-                          child: Icon(Icons.person, color: Colors.white),
-                        ),
+              //         children: [
+              //           const CircleAvatar(
+              //             radius: 28,
+              //             backgroundColor: Colors.white24,
+              //             child: Icon(Icons.person, color: Colors.white),
+              //           ),
 
-                        const SizedBox(height: 10),
+              //           const SizedBox(height: 10),
 
-                        Text(
-                          "Hello,",
-                          style: GoogleFonts.plusJakartaSans(
-                            color: Colors.white70,
-                          ),
-                        ),
+              //           Text(
+              //             "Hello,",
+              //             style: GoogleFonts.plusJakartaSans(
+              //               color: Colors.white70,
+              //             ),
+              //           ),
 
-                        Text(
-                          displayName,
-                          style: GoogleFonts.plusJakartaSans(
-                            color: Colors.white,
-                            fontSize: 26,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+              //           Text(
+              //             displayName,
+              //             style: GoogleFonts.plusJakartaSans(
+              //               color: Colors.white,
+              //               fontSize: 26,
+              //               fontWeight: FontWeight.bold,
+              //             ),
+              //           ),
 
-                        const SizedBox(height: 10),
+              //           const SizedBox(height: 10),
 
-                        buildStatus(status),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
+              //           buildStatus(status),
+              //         ],
+              //       ),
+              //     ),
+              //   ),
+              // ),
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.all(20),
@@ -130,6 +129,22 @@ class _PartnerPageState extends State<PartnerPage> {
                       ),
 
                       const SizedBox(height: 20),
+
+                      /// 🔹 HOW TO USE (NEW)
+                      GestureDetector(
+                        onTap: () {
+                          context.push('/media-partner-guide'); // 👈 route
+                        },
+                        child: const Text(
+                          "How to Fill Media partner!*",
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.red,
+                            fontWeight: FontWeight.w600,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
 
                       buildTile(
                         title: "Revenue Tracker",
