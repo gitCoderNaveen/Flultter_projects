@@ -23,8 +23,12 @@ class _SearchPageState extends State<SearchPage> {
 
   SearchFilter searchQuery = SearchFilter.business;
 
+  SearchFilter _citySearchType = SearchFilter.business;
+
   bool _loading = false;
   List<dynamic> _results = [];
+  List<String> _cities = [];
+  String? _selectedCity;
 
   bool _initialized = false;
   String _sortOption = 'date_desc';
@@ -52,6 +56,22 @@ class _SearchPageState extends State<SearchPage> {
     }
 
     _fetchDefault();
+  }
+
+  Future<void> _fetchCities() async {
+    final res = await supabase.from('profiles').select('city');
+
+    final citySet = <String>{};
+
+    for (var item in res) {
+      if (item['city'] != null && item['city'].toString().trim().isNotEmpty) {
+        citySet.add(item['city']);
+      }
+    }
+
+    setState(() {
+      _cities = citySet.toList()..sort();
+    });
   }
 
   /// default fetch
@@ -85,7 +105,6 @@ class _SearchPageState extends State<SearchPage> {
         .order('priority', ascending: false)
         .order('normal_list', ascending: false)
         .order('is_business', ascending: false);
-        
 
     setState(() {
       _results = res;
@@ -95,8 +114,14 @@ class _SearchPageState extends State<SearchPage> {
 
   /// search
   Future<void> _search(String query) async {
+    if (_filter == SearchFilter.city && _selectedCity == null) return;
+
     if (query.trim().isEmpty) {
-      _fetchDefault();
+      if (_filter == SearchFilter.city && _selectedCity != null) {
+        _searchByCity(_selectedCity!);
+      } else {
+        _fetchDefault();
+      }
       return;
     }
 
@@ -106,15 +131,23 @@ class _SearchPageState extends State<SearchPage> {
 
     String condition;
 
-    if (_filter == SearchFilter.business) {
+    final activeFilter = _filter == SearchFilter.city
+        ? _citySearchType
+        : _filter;
+
+    if (activeFilter == SearchFilter.business) {
       condition = 'business_name.ilike.%$query%,person_name.ilike.%$query%';
     } else {
       condition = 'keywords.ilike.%$query%';
     }
 
-    final res = await supabase
-        .from('profiles')
-        .select()
+    var queryBuilder = supabase.from('profiles').select();
+
+    if (_filter == SearchFilter.city && _selectedCity != null) {
+      queryBuilder = queryBuilder.ilike('city', '%$_selectedCity%');
+    }
+
+    final res = await queryBuilder
         .or(condition)
         .order('is_prime', ascending: false)
         .order('priority', ascending: false)
@@ -126,7 +159,7 @@ class _SearchPageState extends State<SearchPage> {
       _loading = false;
     });
 
-    _logSearch(query, _filter.name);
+    _logSearch(query, activeFilter.name);
   }
 
   Future<void> _searchByLetter(String letter) async {
@@ -193,47 +226,157 @@ class _SearchPageState extends State<SearchPage> {
   /// SEARCH BARS UI
   Widget _buildSearchBars() {
     if (_filter == SearchFilter.city) {
-      return Row(
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          /// 🔙 BACK BUTTON
-          IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              setState(() {
-                _filter = SearchFilter.business; // default mode
-                _cityController.clear();
-              });
-
-              if (_businessController.text.isNotEmpty) {
-                _search(_businessController.text);
-              } else if (_productController.text.isNotEmpty) {
-                _search(_productController.text);
-              } else {
-                _fetchDefault();
-              } // reload default data
-            },
-          ),
-
-          /// CITY SEARCH FIELD
-          Expanded(
-            child: TextField(
-              controller: _cityController,
-
-              onChanged: (value) {
-                _searchByCity(value);
-              },
-
-              decoration: InputDecoration(
-                hintText: "Search by City",
-                filled: true,
-                fillColor: Colors.grey.shade200,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
+          /// 🔹 BEFORE CITY SELECTED → show dropdown
+          if (_selectedCity == null) ...[
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () {
+                    setState(() {
+                      _filter = SearchFilter.business;
+                    });
+                    _fetchDefault();
+                  },
                 ),
-              ),
+
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedCity,
+                    hint: const Text("Select City"),
+                    items: _cities.map((city) {
+                      return DropdownMenuItem(value: city, child: Text(city));
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedCity = value;
+                      });
+                      _searchByCity(value!);
+                    },
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Colors.grey.shade200,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
+          ],
+
+          /// 🔹 AFTER CITY SELECTED → compact row
+          if (_selectedCity != null) ...[
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                /// 🔹 ROW 1 → CITY TAG
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.location_on,
+                            size: 16,
+                            color: Colors.red,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _selectedCity!,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedCity = null;
+                              });
+                              _fetchDefault();
+                            },
+                            child: const Padding(
+                              padding: EdgeInsets.only(left: 6),
+                              child: Icon(Icons.close, size: 14),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 10),
+
+                /// 🔹 ROW 2 → SEARCH FIELDS
+                Row(
+                  children: [
+                    /// BUSINESS SEARCH
+                    Expanded(
+                      flex: _citySearchType == SearchFilter.business ? 8 : 2,
+                      child: TextField(
+                        controller: _businessController,
+                        onTap: () {
+                          setState(() {
+                            _citySearchType = SearchFilter.business;
+                            _productController.clear();
+                          });
+                        },
+                        onChanged: _search,
+                        decoration: InputDecoration(
+                          hintText: "Business",
+                          filled: true,
+                          fillColor: Colors.grey.shade200,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(width: 8),
+
+                    /// PRODUCT SEARCH
+                    Expanded(
+                      flex: _citySearchType == SearchFilter.products ? 8 : 2,
+                      child: TextField(
+                        controller: _productController,
+                        onTap: () {
+                          setState(() {
+                            _citySearchType = SearchFilter.products;
+                            _businessController.clear();
+                          });
+                        },
+                        onChanged: _search,
+                        decoration: InputDecoration(
+                          hintText: "Product search",
+                          filled: true,
+                          fillColor: Colors.grey.shade200,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
         ],
       );
     }
@@ -306,41 +449,21 @@ class _SearchPageState extends State<SearchPage> {
 
         const SizedBox(width: 8),
         PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert),
-          color: const Color.fromARGB(255, 255, 255, 255),
           onSelected: (value) {
             if (value == 'city') {
               setState(() {
                 _filter = SearchFilter.city;
-
-                // clear other fields
                 _businessController.clear();
                 _productController.clear();
+                _selectedCity = null;
               });
+
+              _fetchCities(); // 👈 load cities
               return;
             }
-
-            setState(() {
-              _sortOption = value;
-            });
-
-            _fetchSortedData();
           },
           itemBuilder: (context) => [
-            const PopupMenuItem(value: 'az', child: Text('A → Z', style: TextStyle(fontSize: 14),)),
-            const PopupMenuItem(value: 'za', child: Text('Z → A',style: TextStyle(fontSize: 14),)),
-            const PopupMenuItem(
-              value: 'date_asc',
-              child: Text('Date Ascending', style: TextStyle(fontSize: 14),),
-            ),
-            const PopupMenuItem(
-              value: 'date_desc',
-              child: Text('Date Descending',style: TextStyle(fontSize: 14),),
-            ),
-            const PopupMenuItem(
-              value: 'city',
-              child: Text('Search by City',style: TextStyle(fontSize: 14),),
-            ), // 👈 NEW
+            const PopupMenuItem(value: 'city', child: Text('Search by City')),
           ],
         ),
       ],

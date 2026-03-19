@@ -1,4 +1,4 @@
-import 'package:celfonephonebookapp/features/admin/ui/admin_dashboard_page.dart';
+import 'package:celfonephonebookapp/features/admin/ui/admin_panel.dart';
 import 'package:celfonephonebookapp/features/analytics/search_logs_page.dart';
 import 'package:celfonephonebookapp/features/analytics/user_sessions_page.dart';
 import 'package:celfonephonebookapp/features/combo_offer/view/combo_offer_page.dart';
@@ -273,9 +273,9 @@ class AppRouter {
         pageBuilder: (context, state) => _slidePage(const OnboardingScreen()),
       ),
       GoRoute(
-        path: '/admin/dashboard',
+        path: '/admin_panel',
         pageBuilder: (context, state) {
-          return AppRouter._slidePage(const AdminDashboardPage());
+          return AppRouter._slidePage(AdminPanel());
         },
       ),
     ],

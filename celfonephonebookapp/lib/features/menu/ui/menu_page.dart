@@ -67,14 +67,19 @@ class MenuPage extends StatelessWidget {
             onTap: () => context.push('/combo_offers'),
           ),
           ListTile(
-            leading: const Icon(Icons.contact_page),
+            leading: const Icon(Icons.notes_rounded),
             title: const Text('About us'),
             onTap: () => context.push('/about_us'),
           ),
           ListTile(
-            leading: const Icon(Icons.contact_page),
+            leading: const Icon(Icons.connect_without_contact),
             title: const Text('Contact us'),
             onTap: () => context.push('/contact_us'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.admin_panel_settings),
+            title: const Text('Admin Panel'),
+            onTap: () => context.push('/admin_panel'),
           ),
           // ListTile(
           //   leading: const Icon(Icons.workspace_premium),
