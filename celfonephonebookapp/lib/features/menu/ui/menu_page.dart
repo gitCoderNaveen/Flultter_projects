@@ -24,12 +24,6 @@ class MenuPage extends StatelessWidget {
               onTap: () => context.push('/profile'),
             ),
 
-          /// Subscriptions (optional: you may keep public or gated)
-          // ListTile(
-          //   leading: const Icon(Icons.workspace_premium),
-          //   title: const Text('Subscriptions'),
-          //   onTap: () => context.push('/subscription'),
-          // ),
           const Divider(),
 
           /// 🔑 AUTH ACTION (LOGIN / LOGOUT)
@@ -81,16 +75,6 @@ class MenuPage extends StatelessWidget {
             title: const Text('Admin Panel'),
             onTap: () => context.push('/admin_panel'),
           ),
-          // ListTile(
-          //   leading: const Icon(Icons.workspace_premium),
-          //   title: const Text('Subscription'),
-          //   onTap: () => context.push('/subscription'),
-          // ),
-          // ListTile(
-          //   leading: const Icon(Icons.trending_up),
-          //   title: const Text('Leads & Views'),
-          //   onTap: () => context.push('/user_sessions'),
-          // ),
         ],
       ),
     );

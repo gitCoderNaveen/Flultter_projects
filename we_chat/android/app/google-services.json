@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "950834867722",
+    "project_id": "alerton-f8f71",
+    "storage_bucket": "alerton-f8f71.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:950834867722:android:0df3e92fe1a85c757a39f3",
+        "android_client_info": {
+          "package_name": "com.example.alert_on"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCCi9CdP_ION6TH8V_BHm2Vros7nccL_xE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:950834867722:android:c5e438a68b63175a7a39f3",
+        "android_client_info": {
+          "package_name": "com.example.we_chat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCCi9CdP_ION6TH8V_BHm2Vros7nccL_xE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
