@@ -50,7 +50,12 @@ class _DiscountGreetingCardWidgetState extends State<DiscountGreetingCardWidget>
 
       if (diff.isNegative) {
         _timer.cancel();
-        if (mounted) Navigator.pop(context);
+
+        setState(() {
+          remaining = Duration.zero;
+        });
+
+        return; // ❌ don't close screen
       }
 
       setState(() {

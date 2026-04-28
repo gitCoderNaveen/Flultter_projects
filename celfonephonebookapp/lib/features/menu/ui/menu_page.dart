@@ -75,6 +75,21 @@ class MenuPage extends StatelessWidget {
             title: const Text('Admin Panel'),
             onTap: () => context.push('/admin_panel'),
           ),
+          ListTile(
+            leading: const Icon(Icons.person),
+            title: const Text('Lions Club'),
+            onTap: () => context.push('/lions_club'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.logout),
+            title: const Text('Opt-Out'),
+            onTap: () => context.push('/opt_out'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.verified),
+            title: const Text('OTP-Verifiation'),
+            onTap: () => context.push('/send_otp'),
+          ),
         ],
       ),
     );

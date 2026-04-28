@@ -1,19 +1,19 @@
 class DirectoryModel {
   final String title;
-  final String image;
-  final String imageKeywords;
+  final String city;
+  final String imageUrl;
 
   DirectoryModel({
     required this.title,
-    required this.image,
-    required this.imageKeywords,
+    required this.city,
+    required this.imageUrl,
   });
 
   factory DirectoryModel.fromJson(Map<String, dynamic> json) {
     return DirectoryModel(
-      title: json['image_title'] ?? '',
-      image: json['image'] ?? '',
-      imageKeywords: json['image_keywords'] ?? '',
+      title: json['title'],
+      city: json['city'],
+      imageUrl: json['image_url'],
     );
   }
 }

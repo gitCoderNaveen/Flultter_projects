@@ -18,7 +18,7 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
   final supabase = Supabase.instance.client;
 
   bool isPersonTab = true;
-  String selectedPrefix = 'Mr.';
+  // String selectedPrefix = 'Mr.';
   String contactType = 'Mobile';
   bool _isLoading = false;
   File? _imageFile;
@@ -26,6 +26,7 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
   bool? _isMobileAvailable;
   bool _isCheckingMobile = false;
   String? _existingName;
+  String selectedPrefix = ''; // ✅ default
 
   bool? _isLandlineAvailable;
   bool _isCheckingLandline = false;
@@ -279,7 +280,7 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
       _isLandlineAvailable = null;
       _existingName = null;
       _existingLandlineName = null;
-      selectedPrefix = 'Mr.';
+      selectedPrefix = '';
       contactType = 'Mobile';
     });
   }
@@ -342,8 +343,8 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
 
     TextEditingController messageController = TextEditingController(
       text: isPersonTab
-          ? "Dear $nameText CELFON BOOK is a mobile App, with profiles of Laks of mobile users. Your Details are also added in it based on field survey online data, You are listed under your profession ${profession}. Kindly verify your details by listing CELFON BOOK ap at ${link} "
-          : "Dear $nameText CELFON BOOK is a mobile App, with profiles of Laks of mobile users. Your Firm ${businessName} is also added in it based field survay online data. You are listed under keywords ${keywords}. Kindly verify your details by listing CELFON BOOK ap at ${link}",
+          ? "Dear $nameText, CELFON BOOK is a Mobile App, with profiles of lakhs of mobile users. Your Details are also added based on field survay, online data, You are listed under your profession ${profession}. Kindly verify your details by clicking CELFON BOOK App at ${link}. "
+          : "Dear $nameText CELFON BOOK is a Mobile App, with profiles of lakhs of mobile users. Your Firm ${businessName} is also added based on field survay, online data. You are listed under keywords ${keywords}. Kindly verify your details by clicking CELFON BOOK App at ${link}.",
     );
 
     showDialog(
@@ -451,6 +452,70 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
     );
   }
 
+  void _showPreview() {
+    if (!_formKey.currentState!.validate()) return;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Preview Details"),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _previewRow("Type", isPersonTab ? "Person" : "Business"),
+                _previewRow("Prefix", selectedPrefix),
+
+                if (isPersonTab) ...[
+                  _previewRow("Name", _personNameController.text),
+                  _previewRow("Profession", _professionController.text),
+                ] else ...[
+                  _previewRow("Business Name", _businessNameController.text),
+                  _previewRow("Contact Person", _contactPersonController.text),
+                  _previewRow("Products", _productInputController.text),
+                ],
+
+                _previewRow("Mobile", _mobileController.text),
+                _previewRow("Landline", _landlineController.text),
+                _previewRow("City", _cityController.text),
+                _previewRow("Pincode", _pincodeController.text),
+                _previewRow("Address", _addressController.text),
+                _previewRow("Email", _emailController.text),
+              ],
+            ),
+          ),
+
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Edit"),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+                _validateAndSave(); // 🔥 final save
+              },
+              child: const Text("Confirm & Save"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _previewRow(String label, String value) {
+    if (value.isEmpty) return const SizedBox();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text("$label: $value", style: const TextStyle(fontSize: 14)),
+    );
+  }
+
   Future<void> _validateAndSave() async {
     if (!_formKey.currentState!.validate()) return;
     if (contactType == 'Mobile' &&
@@ -467,6 +532,13 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
         _mobileController.text.trim().isEmpty) {
       _showSnackBar(
         "Please enter either Mobile or Landline Number!",
+        Colors.red,
+      );
+      return;
+    }
+    if (selectedPrefix.isEmpty) {
+      _showSnackBar(
+        "Please Select The Prefix Mr. or Mrs.",
         Colors.red,
       );
       return;
@@ -630,7 +702,7 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
 
               /// IDENTITY
               if (isPersonTab) ...[
-                _buildPrefixDropdown(),
+                _buildPrefixRadio(),
                 _underlineField("name", _personNameController, "Name", true),
                 _underlineField(
                   "profession",
@@ -645,7 +717,7 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
                   "Business Name",
                   true,
                 ),
-                _buildPrefixDropdown(),
+                _buildPrefixRadio(),
                 _underlineField(
                   "contactPerson",
                   _contactPersonController,
@@ -711,7 +783,7 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1F8EB6),
                   ),
-                  onPressed: _isLoading ? null : _validateAndSave,
+                  onPressed: _isLoading ? null : _showPreview,
                   child: _isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
                       : const Text(
@@ -785,33 +857,55 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
     );
   }
 
-  Widget _buildPrefixDropdown() {
+  Widget _buildPrefixRadio() {
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
-      child: DropdownButtonFormField<String>(
-        focusNode: _prefixFocusNode,
-        value: selectedPrefix,
-        decoration: InputDecoration(
-          labelText: "Prefix",
-          helperText: _prefixFocusNode.hasFocus
-              ? "Select Mr. For Gents and Ms. for Ladies."
-              : null,
-          helperStyle: const TextStyle(color: Colors.red, fontSize: 14),
-          hintStyle: const TextStyle(color: Colors.grey, fontSize: 20),
-          enabledBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: Colors.black),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Prefix",
+            style: TextStyle(fontSize: 16, color: Colors.black),
           ),
-          focusedBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: Colors.black, width: 2),
+
+          if (_prefixFocusNode.hasFocus)
+            const Padding(
+              padding: EdgeInsets.only(top: 4),
+              child: Text(
+                "Select Mr. For Gents and Ms. for Ladies.",
+                style: TextStyle(color: Colors.red, fontSize: 14),
+              ),
+            ),
+
+          Row(
+            children: [
+              Expanded(
+                child: RadioListTile<String>(
+                  value: 'Mr.',
+                  groupValue: selectedPrefix,
+                  onChanged: (val) {
+                    setState(() => selectedPrefix = val!);
+                  },
+                  title: const Text("Mr."),
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              Expanded(
+                child: RadioListTile<String>(
+                  value: 'Ms.',
+                  groupValue: selectedPrefix,
+                  onChanged: (val) {
+                    setState(() => selectedPrefix = val!);
+                  },
+                  title: const Text("Ms."),
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
           ),
-        ),
-        items: [
-          'Mr.',
-          'Ms.',
-        ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-        onChanged: (val) {
-          setState(() => selectedPrefix = val!);
-        },
+        ],
       ),
     );
   }

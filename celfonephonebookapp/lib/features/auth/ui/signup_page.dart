@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:celfonephonebookapp/core/services/supabase_service.dart';
 import 'package:celfonephonebookapp/features/auth/ui/login_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -51,10 +52,11 @@ class _SignupPageState extends State<SignupPage> {
 
     try {
       String phone = _phoneController.text.trim();
+      String name = _nameController.text.trim();
 
       // Add +91 automatically if missing
       if (!phone.startsWith('+')) {
-        phone = '+$phone';
+        phone = '+91$phone';
       }
 
       /// 🔐 DEFAULT PASSWORD
@@ -79,7 +81,8 @@ class _SignupPageState extends State<SignupPage> {
       });
 
       if (!mounted) return;
-      context.go('/home');
+
+      _showSuccessPopup(phone, name);
     } on AuthException catch (e) {
       setState(() => _error = e.message);
     } catch (e) {
@@ -87,6 +90,135 @@ class _SignupPageState extends State<SignupPage> {
     } finally {
       setState(() => _loading = false);
     }
+  }
+
+  void _showSuccessPopup(String phone, String name) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.black, width: 2),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                /// ✅ TITLE
+                const Text(
+                  "Registration Successful",
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
+
+                const SizedBox(height: 6),
+
+                const Text(
+                  "You Are Successfully Registered.",
+                  style: TextStyle(fontSize: 18),
+                ),
+
+                const SizedBox(height: 16),
+
+                /// ✅ DETAILS
+                const Text(
+                  "App : CELFON BOOK",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+
+                const SizedBox(height: 10),
+
+                Text(
+                  "Name : $name",
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 6),
+
+                Text(
+                  "UN : $phone",
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 6),
+
+                const Text(
+                  "PW: celfonbook",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+
+                const SizedBox(height: 16),
+
+                /// 📸 NOTE
+                const Center(
+                  child: Text(
+                    "Please take a Screen Shot & save",
+                    style: TextStyle(fontSize: 16),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                /// ℹ️ INFO
+                const Text(
+                  "If you are a Businessman, then fill your Business Details in the Menu > My Profile and get Trade Enquiries FREE",
+                  style: TextStyle(fontSize: 15),
+                ),
+
+                const SizedBox(height: 20),
+
+                /// 🔘 ACTIONS
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    /// COPY BUTTON
+                    IconButton(
+                      icon: const Icon(Icons.copy),
+                      onPressed: () {
+                        Clipboard.setData(
+                          ClipboardData(
+                            text:
+                                "App: CELFON BOOK\nName: $name\nUN: $phone\nPW: celfonbook",
+                          ),
+                        );
+
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(const SnackBar(content: Text("Copied")));
+                      },
+                    ),
+
+                    /// OK BUTTON
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        context.go('/home');
+                      },
+                      child: const Text("OK"),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override

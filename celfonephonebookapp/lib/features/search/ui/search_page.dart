@@ -54,6 +54,20 @@ class _SearchPageState extends State<SearchPage> {
       _searchByLetter(params['letter']!);
       return;
     }
+    if (params.containsKey('city')) {
+      final city = params['city']!;
+
+      _fetchCities().then((_) {
+        setState(() {
+          _selectedCity = city;
+          _filter = SearchFilter.city;
+        });
+
+        _searchByCity(city);
+      });
+
+      return;
+    }
 
     _fetchDefault();
   }
@@ -383,87 +397,97 @@ class _SearchPageState extends State<SearchPage> {
 
     final isBusiness = _filter == SearchFilter.business;
 
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // BUSINESS (same as before)
-        Expanded(
-          flex: isBusiness ? 8 : 2,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            height: 45,
-            child: TextField(
-              controller: _businessController,
-              onTap: () {
-                setState(() {
-                  _filter = SearchFilter.business;
-                  _productController.clear();
-                });
-              },
-              onChanged: (value) {
-                _search(value);
-              },
-              decoration: InputDecoration(
-                hintText: "Business search",
-                filled: true,
-                fillColor: Colors.grey.shade200,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-              ),
-            ),
-          ),
-        ),
+        /// 🔥 NEW: SEARCH CITY BUTTON (TOP)
+        GestureDetector(
+          onTap: () {
+            setState(() {
+              _filter = SearchFilter.city;
+              _businessController.clear();
+              _productController.clear();
+              _selectedCity = null;
+            });
 
-        const SizedBox(width: 8),
-
-        // PRODUCT (same as before)
-        Expanded(
-          flex: isBusiness ? 2 : 8,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            height: 45,
-            child: TextField(
-              controller: _productController,
-              onTap: () {
-                setState(() {
-                  _filter = SearchFilter.products;
-                  _businessController.clear();
-                });
-              },
-              onChanged: (value) {
-                _search(value);
-              },
-              decoration: InputDecoration(
-                hintText: "Product search",
-                filled: true,
-                fillColor: Colors.grey.shade200,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-              ),
-            ),
-          ),
-        ),
-
-        const SizedBox(width: 8),
-        PopupMenuButton<String>(
-          onSelected: (value) {
-            if (value == 'city') {
-              setState(() {
-                _filter = SearchFilter.city;
-                _businessController.clear();
-                _productController.clear();
-                _selectedCity = null;
-              });
-
-              _fetchCities(); // 👈 load cities
-              return;
-            }
+            _fetchCities(); // load cities
           },
-          itemBuilder: (context) => [
-            const PopupMenuItem(value: 'city', child: Text('Search by City')),
+          child: Row(
+            children: const [
+              Icon(Icons.location_on, color: Colors.red),
+              SizedBox(width: 6),
+              Text(
+                "Search city",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        /// 🔻 EXISTING SEARCH BARS (UNCHANGED)
+        Row(
+          children: [
+            Expanded(
+              flex: isBusiness ? 8 : 2,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                height: 45,
+                child: TextField(
+                  controller: _businessController,
+                  onTap: () {
+                    setState(() {
+                      _filter = SearchFilter.business;
+                      _productController.clear();
+                    });
+                  },
+                  onChanged: (value) {
+                    _search(value);
+                  },
+                  decoration: InputDecoration(
+                    hintText: "Business search",
+                    filled: true,
+                    fillColor: Colors.grey.shade200,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(width: 8),
+
+            Expanded(
+              flex: isBusiness ? 2 : 8,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                height: 45,
+                child: TextField(
+                  controller: _productController,
+                  onTap: () {
+                    setState(() {
+                      _filter = SearchFilter.products;
+                      _businessController.clear();
+                    });
+                  },
+                  onChanged: (value) {
+                    _search(value);
+                  },
+                  decoration: InputDecoration(
+                    hintText: "Product search",
+                    filled: true,
+                    fillColor: Colors.grey.shade200,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ],

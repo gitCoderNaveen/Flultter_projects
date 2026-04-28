@@ -36,7 +36,7 @@ class SubscriptionController {
       title: "BUSINESS Listing",
       pmLabel: "Rs 200 PM",
       paLabel: "Rs 2,000 PA",
-      color: magentaColor,
+      color: Colors.green,
       rowColor: const Color(0xFFE8F5E9),
       hasDiscount: true,
       features: [
@@ -75,7 +75,7 @@ class SubscriptionController {
       title: "PREMIUM Listing",
       pmLabel: "Rs 750 PM",
       paLabel: "Rs 7,500 PA",
-      color: goldColor,
+      color: Colors.red,
       rowColor: const Color(0xFFFFFDE7),
       hasDiscount: true,
       features: [

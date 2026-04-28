@@ -1,3 +1,4 @@
+import 'package:celfonephonebookapp/features/home/ui/custom_navigator.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -12,7 +13,7 @@ class HomeShell extends StatelessWidget {
 
     return Scaffold(
       body: child,
-      bottomNavigationBar: BottomNavigationBar(
+      bottomNavigationBar: CustomNavBar(
         currentIndex: index,
         onTap: (i) {
           switch (i) {
@@ -33,21 +34,6 @@ class HomeShell extends StatelessWidget {
               break;
           }
         },
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-
-          BottomNavigationBarItem(
-            icon: Icon(Icons.campaign),
-            label: 'Promotion',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.local_offer),
-            label: 'partner',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.menu), label: 'Menu'),
-        ],
       ),
     );
   }
@@ -59,4 +45,29 @@ class HomeShell extends StatelessWidget {
     if (location.startsWith('/menu')) return 4;
     return 0;
   }
+}
+
+BottomNavigationBarItem _buildItem(
+  IconData icon,
+  String label,
+  int itemIndex,
+  int currentIndex, {
+  bool isSpecial = false,
+}) {
+  final isSelected = itemIndex == currentIndex;
+
+  return BottomNavigationBarItem(
+    label: label,
+    icon: AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeInOut,
+      padding: EdgeInsets.all(isSelected && isSpecial ? 8 : 0),
+      child: Icon(
+        icon,
+        size: isSelected
+            ? (isSpecial ? 34 : 26) // 🔥 Bigger search icon
+            : 22,
+      ),
+    ),
+  );
 }

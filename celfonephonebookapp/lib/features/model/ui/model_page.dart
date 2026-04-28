@@ -313,7 +313,7 @@ class _ModelPageState extends State<ModelPage> {
               children: [
                 Expanded(
                   child: _tabButton(
-                    title: "About",
+                    title: "Profile",
                     selected: showAbout,
                     onTap: () {
                       setState(() {

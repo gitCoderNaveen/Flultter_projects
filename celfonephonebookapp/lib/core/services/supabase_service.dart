@@ -12,6 +12,8 @@ class SupabaseService {
     );
   }
 
+  final supabase = Supabase.instance.client;
+
   String get userId => Supabase.instance.client.auth.currentUser?.id ?? '';
 
   Future<List<DirectoryModel>> fetchTilesTitles() async {

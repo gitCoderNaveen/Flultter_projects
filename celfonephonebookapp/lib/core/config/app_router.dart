@@ -1,13 +1,24 @@
 import 'package:celfonephonebookapp/features/admin/ui/admin_panel.dart';
 import 'package:celfonephonebookapp/features/analytics/search_logs_page.dart';
 import 'package:celfonephonebookapp/features/analytics/user_sessions_page.dart';
+import 'package:celfonephonebookapp/features/clubs/lions_club/LionsOfficialsScreen.dart';
+import 'package:celfonephonebookapp/features/clubs/lions_club/cabinet_screen.dart';
+import 'package:celfonephonebookapp/features/clubs/lions_club/club_members.dart';
+import 'package:celfonephonebookapp/features/clubs/lions_club/dc_screen.dart';
+import 'package:celfonephonebookapp/features/clubs/lions_club/lions_directory.dart';
+import 'package:celfonephonebookapp/features/clubs/lions_club/rc_screens.dart';
+import 'package:celfonephonebookapp/features/clubs/lions_club/zc_screens.dart';
 import 'package:celfonephonebookapp/features/combo_offer/view/combo_offer_page.dart';
 import 'package:celfonephonebookapp/features/favorites/view/favorite_page.dart';
 import 'package:celfonephonebookapp/features/menu/features/about_us.dart';
 import 'package:celfonephonebookapp/features/menu/features/contact_us.dart';
+import 'package:celfonephonebookapp/features/menu/features/opt_out.dart';
 import 'package:celfonephonebookapp/features/model/ui/business_model_page.dart';
 import 'package:celfonephonebookapp/features/model/ui/free_model.dart';
 import 'package:celfonephonebookapp/features/model/ui/model_page.dart';
+import 'package:celfonephonebookapp/features/otp/UI/send_otp.dart';
+import 'package:celfonephonebookapp/features/otp/UI/verify_otp.dart';
+import 'package:celfonephonebookapp/features/otp/UI/verify_success.dart';
 import 'package:celfonephonebookapp/features/partner/features/earning_details/ui/earning_details_page.dart';
 import 'package:celfonephonebookapp/features/partner/features/media_partner/ui/media_partner_page.dart';
 import 'package:celfonephonebookapp/features/partner/features/media_partner_guide.dart';
@@ -224,8 +235,59 @@ class AppRouter {
             pageBuilder: (context, state) =>
                 AppRouter._slidePage(ContactUsPage()),
           ),
+          GoRoute(
+            path: '/opt_out',
+            pageBuilder: (context, state) =>
+                AppRouter._slidePage(PrivacyOptOutPage()),
+          ),
         ],
       ),
+      GoRoute(
+        path: '/lions_club',
+        pageBuilder: (context, state) => AppRouter._slidePage(LionsDirectory()),
+      ),
+      GoRoute(
+        path: '/menu_page',
+        pageBuilder: (context, state) =>
+            AppRouter._slidePage(LionsOfficialsScreen()),
+      ),
+      GoRoute(
+        path: '/cabinet_screen',
+        pageBuilder: (context, state) => AppRouter._slidePage(CabinetScreen()),
+      ),
+      GoRoute(
+        path: '/rc_screen',
+        pageBuilder: (context, state) => AppRouter._slidePage(RcScreens()),
+      ),
+      GoRoute(
+        path: '/zc_screen',
+        pageBuilder: (context, state) => AppRouter._slidePage(ZcScreens()),
+      ),
+      GoRoute(
+        path: '/dc_screen',
+        pageBuilder: (context, state) => AppRouter._slidePage(DcScreen()),
+      ),
+      GoRoute(
+        path: '/club_members',
+        pageBuilder: (context, state) => AppRouter._slidePage(ClubMembers()),
+      ),
+      GoRoute(
+        path: '/send_otp',
+        pageBuilder: (context, state) => AppRouter._slidePage(SendOtpPage()),
+      ),
+      GoRoute(
+        path: '/otp_verification',
+        pageBuilder: (context, state) {
+          final phone = state.extra as String;
+
+          return AppRouter._slidePage(VerifyOtpPage(phone: phone));
+        },
+      ),
+      GoRoute(
+        path: '/verify_success',
+        pageBuilder: (context, state) => AppRouter._slidePage(VerifySuccessPage()),
+      ),
+      
 
       GoRoute(
         path: '/ad/:id',

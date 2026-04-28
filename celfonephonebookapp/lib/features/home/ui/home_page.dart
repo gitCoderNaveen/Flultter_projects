@@ -1,9 +1,8 @@
 import 'package:celfonephonebookapp/core/services/profile_service.dart';
 import 'package:celfonephonebookapp/core/services/supabase_service.dart';
-import 'package:celfonephonebookapp/features/categories/widgets/home_categories_section.dart';
 import 'package:celfonephonebookapp/features/home/controller/popular_firm_controller.dart';
 import 'package:celfonephonebookapp/features/home/model/directory_model.dart';
-import 'package:celfonephonebookapp/features/home/model/directory_service_model.dart';
+import 'package:celfonephonebookapp/features/home/model/home_category_section.dart';
 import 'package:celfonephonebookapp/features/home/model/play_book_model.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -12,7 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../controller/home_controller.dart';
 import '../service/home_service.dart';
 import 'dart:async';
-import '../service/directory_services.dart';
+
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -41,7 +40,13 @@ class _HomeView extends StatelessWidget {
           SliverToBoxAdapter(child: _Greeting()),
           SliverToBoxAdapter(child: _Carousel(c)),
           SliverToBoxAdapter(child: _IndexFinder()),
-          // SliverToBoxAdapter(child: HomeCategoriesSection()),
+          SliverToBoxAdapter(
+            child: HomeCategoriesSection(title: 'Popular Categories B2C'),
+          ),
+          SliverToBoxAdapter(
+            child: HomeCategoriesSection(title: 'Popular Categories B2B'),
+          ),
+          SliverToBoxAdapter(child: OnlineDirectorySection()),
           SliverToBoxAdapter(child: _PopularFirms()),
           SliverToBoxAdapter(child: PlayBooksSection()),
         ],
@@ -733,76 +738,76 @@ class _PopularFirms extends StatelessWidget {
 //   }
 // }
 
-class TileCard extends StatelessWidget {
-  final DirectoryModel tile;
+// class TileCard extends StatelessWidget {
+//   final DirectoryModel tile;
 
-  const TileCard({required this.tile});
+//   const TileCard({required this.tile});
 
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        final encoded = Uri.encodeComponent(tile.imageKeywords);
-        context.push(
-          '/search?service=$encoded',
-        ); // Pass service title as query parameter
-      },
-      child: Container(
-        width: 160,
-        margin: const EdgeInsets.only(right: 12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
-          color: Colors.grey.shade200,
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black26,
-              blurRadius: 6,
-              offset: Offset(3, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            /// Gradient title
-            Container(
-              height: 60,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(22),
-                  topRight: Radius.circular(22),
-                  bottomLeft: Radius.circular(22),
-                  bottomRight: Radius.circular(22),
-                ),
-                gradient: LinearGradient(
-                  colors: [Color(0xff8E2DE2), Color(0xffF7971E)],
-                ),
-              ),
-              child: Text(
-                tile.title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
+//   @override
+//   Widget build(BuildContext context) {
+//     return GestureDetector(
+//       onTap: () {
+//         final encoded = Uri.encodeComponent(tile.imageKeywords);
+//         context.push(
+//           '/search?service=$encoded',
+//         ); // Pass service title as query parameter
+//       },
+//       child: Container(
+//         width: 160,
+//         margin: const EdgeInsets.only(right: 12),
+//         decoration: BoxDecoration(
+//           borderRadius: BorderRadius.circular(22),
+//           color: Colors.grey.shade200,
+//           boxShadow: const [
+//             BoxShadow(
+//               color: Colors.black26,
+//               blurRadius: 6,
+//               offset: Offset(3, 4),
+//             ),
+//           ],
+//         ),
+//         child: Column(
+//           children: [
+//             /// Gradient title
+//             Container(
+//               height: 60,
+//               alignment: Alignment.center,
+//               decoration: const BoxDecoration(
+//                 borderRadius: BorderRadius.only(
+//                   topLeft: Radius.circular(22),
+//                   topRight: Radius.circular(22),
+//                   bottomLeft: Radius.circular(22),
+//                   bottomRight: Radius.circular(22),
+//                 ),
+//                 gradient: LinearGradient(
+//                   colors: [Color(0xff8E2DE2), Color(0xffF7971E)],
+//                 ),
+//               ),
+//               child: Text(
+//                 tile.title,
+//                 textAlign: TextAlign.center,
+//                 style: const TextStyle(
+//                   color: Colors.white,
+//                   fontWeight: FontWeight.bold,
+//                 ),
+//               ),
+//             ),
 
-            const SizedBox(height: 10),
+//             const SizedBox(height: 10),
 
-            /// Supabase image
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Image.network(tile.image, fit: BoxFit.contain),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+//             /// Supabase image
+//             Expanded(
+//               child: Padding(
+//                 padding: const EdgeInsets.all(8),
+//                 child: Image.network(tile.image, fit: BoxFit.contain),
+//               ),
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+// }
 
 class PlayBooksSection extends StatefulWidget {
   const PlayBooksSection({Key? key}) : super(key: key);
@@ -963,6 +968,83 @@ class FullScreenImagePage extends StatelessWidget {
                 const Icon(Icons.broken_image, color: Colors.white, size: 60),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class OnlineDirectorySection extends StatefulWidget {
+  const OnlineDirectorySection({super.key});
+
+  @override
+  State<OnlineDirectorySection> createState() => _OnlineDirectorySectionState();
+}
+
+class _OnlineDirectorySectionState extends State<OnlineDirectorySection> {
+  final service = SupabaseService();
+  late Future<List<DirectoryModel>> future;
+
+  @override
+  void initState() {
+    super.initState();
+    future = HomeService().fetchDirectories();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Online Directory",
+            style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 5),
+
+          FutureBuilder<List<DirectoryModel>>(
+            future: future,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (snapshot.hasError) {
+                return const Text("Error loading directories");
+              }
+
+              final items = snapshot.data ?? [];
+
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: items.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2, // 🔥 EXACT like image
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: 1,
+                ),
+                itemBuilder: (_, index) {
+                  final item = items[index];
+
+                  return GestureDetector(
+                    onTap: () {
+                      final city = Uri.encodeComponent(item.city);
+
+                      context.push('/search?city=$city'); // ✅ PASS CITY
+                    },
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(item.imageUrl, fit: BoxFit.cover),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ],
       ),
     );
   }

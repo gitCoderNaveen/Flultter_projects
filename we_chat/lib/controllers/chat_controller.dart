@@ -10,7 +10,7 @@ class ChatController {
     if (user == null || content.trim().isEmpty) return;
 
     /// 1️⃣ Insert message
-    await supabase.from('messages').insert({
+    await supabase.from('messages_wechat').insert({
       'user_id': user.id,
       'receiver_id': receiverId,
       'content': content,
@@ -41,7 +41,7 @@ class ChatController {
   /// 📡 Real-time messages
   Stream<List<Map<String, dynamic>>> getMessages() {
     return supabase
-        .from('messages')
+        .from('messages_wechat')
         .stream(primaryKey: ['id'])
         .order('created_at');
   }

@@ -1,6 +1,5 @@
 import 'package:celfonephonebookapp/core/services/auth_service.dart';
 import 'package:celfonephonebookapp/features/auth/ui/signup_page.dart';
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -16,10 +15,28 @@ class _LoginPageState extends State<LoginPage> {
   final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
   final _authService = AuthService();
-  bool _isPasswordVisible = false;
 
+  bool _isPasswordVisible = false;
   bool _loading = false;
   String? _error;
+  bool _isLionsMember = false;
+
+  // ✅ CHECK MEMBER FUNCTION
+  Future<bool> checkIfLionsMember(String mobile) async {
+    final supabase = Supabase.instance.client;
+
+    // remove +91 if exists
+    final cleanMobile = mobile.replaceAll('+91', '');
+
+    final response = await supabase
+        .from('profiles')
+        .select()
+        .eq('mobile_number', cleanMobile)
+        .eq('assn', 'lions')
+        .maybeSingle();
+
+    return response != null;
+  }
 
   Future<void> _handleLogin() async {
     if (_identifierController.text.isEmpty ||
@@ -31,27 +48,41 @@ class _LoginPageState extends State<LoginPage> {
     setState(() {
       _loading = true;
       _error = null;
+      _isLionsMember = false;
     });
 
     try {
       final identifier = _identifierController.text.trim();
 
+      // 👉 CLEAN NUMBER (IMPORTANT FIX)
+      final cleanMobile = identifier.replaceAll('+91', '');
+
+      // ✅ LOGIN
       if (identifier.contains('@')) {
-        /// ✅ Email login
         await Supabase.instance.client.auth.signInWithPassword(
           email: identifier,
           password: _passwordController.text.trim(),
         );
       } else {
-        /// ✅ Phone login (must include country code)
         await Supabase.instance.client.auth.signInWithPassword(
           phone: identifier.startsWith('+') ? identifier : '+$identifier',
           password: _passwordController.text.trim(),
         );
       }
 
+      // ✅ CHECK MEMBER (USING CLEAN NUMBER)
+      final response = await Supabase.instance.client
+          .from('profiles')
+          .select()
+          .eq('mobile_number', cleanMobile)
+          .eq('assn', 'lions')
+          .maybeSingle();
+
       if (!mounted) return;
       context.go('/home');
+      setState(() {
+        _isLionsMember = response != null;
+      });
     } on AuthException catch (e) {
       setState(() => _error = e.message);
     } catch (_) {
@@ -76,7 +107,7 @@ class _LoginPageState extends State<LoginPage> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              /// 🔵 Top Curved Header
+              /// 🔵 Header
               Container(
                 height: 260,
                 width: double.infinity,
@@ -122,7 +153,7 @@ class _LoginPageState extends State<LoginPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   children: [
-                    /// 🔁 Signup Redirect
+                    /// Signup
                     TextButton(
                       onPressed: () {
                         Navigator.push(
@@ -132,9 +163,7 @@ class _LoginPageState extends State<LoginPage> {
                       },
                       child: const Text(
                         'Create a New Account Now (If Already Not Registered.)',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.red),
+                        style: TextStyle(fontSize: 18, color: Colors.red),
                       ),
                     ),
 
@@ -143,6 +172,7 @@ class _LoginPageState extends State<LoginPage> {
                       icon: Icons.phone_outlined,
                       controller: _identifierController,
                     ),
+
                     const SizedBox(height: 16),
 
                     _InputField(
@@ -166,13 +196,11 @@ class _LoginPageState extends State<LoginPage> {
 
                     const SizedBox(height: 8),
 
-                    /// 🔐 Forgot password
+                    /// Forgot password
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: () {
-                          // TODO: navigate to forgot password
-                        },
+                        onPressed: () {},
                         child: const Text(
                           'Forgot password?',
                           style: TextStyle(color: Colors.grey),
@@ -191,7 +219,7 @@ class _LoginPageState extends State<LoginPage> {
 
                     const SizedBox(height: 30),
 
-                    /// ➡️ Login Button
+                    /// Login Button
                     Align(
                       alignment: Alignment.centerRight,
                       child: GestureDetector(
@@ -232,8 +260,31 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 20),
 
-                    const SizedBox(height: 40),
+                    // ✅ MEMBERS BUTTON
+                    if (_isLionsMember)
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2E86A1),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          onPressed: () {
+                            context.push('/lions_club');
+                          },
+                          child: const Text(
+                            "Members Directory",
+                            style: TextStyle(fontSize: 16, color: Colors.white),
+                          ),
+                        ),
+                      ),
+
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
@@ -245,7 +296,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-/// 🔹 Reusable Input Field
+/// 🔹 Input Field
 class _InputField extends StatelessWidget {
   final String hint;
   final IconData icon;
@@ -270,7 +321,7 @@ class _InputField extends StatelessWidget {
         hintText: hint,
         prefixIcon: Icon(icon),
         suffixIcon: suffixIcon,
-        border: OutlineInputBorder(),
+        border: const OutlineInputBorder(),
       ),
     );
   }

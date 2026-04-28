@@ -11,6 +11,6 @@ class AppRoutes {
   static Map<String, WidgetBuilder> routes = {
     login: (_) => LoginPage(),
     signup: (_) => SignupPage(),
-    home: (_) => HomePage(),
+    home: (_) => HomePage(receiverId: "61002678-0e73-4bd4-857d-36984033fa46"),
   };
 }
