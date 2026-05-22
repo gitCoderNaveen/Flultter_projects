@@ -30,6 +30,9 @@ class SearchResultCard extends StatelessWidget {
 
     final String personName = item['person_name'] ?? "";
     final String businessName = item['business_name'] ?? "";
+    final expoData = item['expo'];
+    final String expoEdition = expoData?['expo_edition'] ?? "";
+    final String stallNo = item['stall_no'] ?? "";
 
     String name;
 
@@ -191,6 +194,36 @@ class SearchResultCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 14),
                   ),
+                  if (item['expo_id'] != null &&
+                      expoEdition.isNotEmpty &&
+                      stallNo.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.storefront,
+                            size: 14,
+                            color: Colors.orange,
+                          ),
+
+                          const SizedBox(width: 4),
+
+                          Expanded(
+                            child: Text(
+                              "$expoEdition • Stall No: $stallNo",
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.deepOrange,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),

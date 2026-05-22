@@ -27,6 +27,7 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
   bool _isCheckingMobile = false;
   String? _existingName;
   String selectedPrefix = ''; // ✅ default
+  bool generateOtp = false;
 
   bool? _isLandlineAvailable;
   bool _isCheckingLandline = false;
@@ -343,8 +344,8 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
 
     TextEditingController messageController = TextEditingController(
       text: isPersonTab
-          ? "Dear $nameText, CELFON BOOK is a Mobile App, with profiles of lakhs of mobile users. Your Details are also added based on field survay, online data, You are listed under your profession ${profession}. Kindly verify your details by clicking CELFON BOOK App at ${link}. "
-          : "Dear $nameText CELFON BOOK is a Mobile App, with profiles of lakhs of mobile users. Your Firm ${businessName} is also added based on field survay, online data. You are listed under keywords ${keywords}. Kindly verify your details by clicking CELFON BOOK App at ${link}.",
+          ? "Dear $nameText, CELFON BOOK is a Mobile App, with profiles of lakhs of mobile users. Your Details are also added based on field survay, online data, You are listed under your profession ${profession?.toUpperCase()??''}. Kindly verify your details by clicking CELFON BOOK App at ${link}. "
+          : "Dear $nameText CELFON BOOK is a Mobile App, with profiles of lakhs of mobile users. Your Firm ${businessName} is also added based on field survay, online data. You are listed under keywords ${keywords?.toUpperCase()??''}. Kindly verify your details by clicking CELFON BOOK App at ${link}.",
     );
 
     showDialog(

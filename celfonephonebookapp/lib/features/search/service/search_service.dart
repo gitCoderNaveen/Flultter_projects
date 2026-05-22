@@ -9,7 +9,7 @@ class SearchService {
   Future<List<dynamic>> fetchAll() async {
     return await _db
         .from(DbTables.profiles)
-        .select()
+        .select('*, expo:expo_id(expo_edition)')
         .order(ProfileFields.isPrime, ascending: false)
         .order(ProfileFields.priority, ascending: false);
   }

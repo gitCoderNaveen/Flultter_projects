@@ -3,6 +3,7 @@ import 'package:celfonephonebookapp/core/services/supabase_service.dart';
 import 'package:celfonephonebookapp/features/partner/features/earning_details/model/earning_model.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'payment_history_page.dart';
 
 class EarningDetailsPage extends StatefulWidget {
   const EarningDetailsPage({super.key});
@@ -13,7 +14,6 @@ class EarningDetailsPage extends StatefulWidget {
 
 class _EarningDetailsPageState extends State<EarningDetailsPage> {
   // ================= STATE VARIABLES =================
-
   List<EarningModel> activities = [];
   bool isLoading = false;
 
@@ -24,7 +24,6 @@ class _EarningDetailsPageState extends State<EarningDetailsPage> {
   late Future<Map<String, dynamic>> _lifetimeStatsFuture;
 
   // ================= INIT =================
-
   @override
   void initState() {
     super.initState();
@@ -122,7 +121,7 @@ class _EarningDetailsPageState extends State<EarningDetailsPage> {
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
           colorScheme: const ColorScheme.light(
-            primary: Color(0xFF6366F1),
+            primary: Color(0xFF1F8EB6),
             onPrimary: Colors.white,
             surface: Colors.white,
             onSurface: Colors.black,
@@ -141,9 +140,8 @@ class _EarningDetailsPageState extends State<EarningDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
-    const Color primaryIndigo = Color(0xFF1F8EB6);
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9), // Modern Light Slate background
+      backgroundColor: const Color(0xFFF1F5F9),
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
@@ -164,10 +162,52 @@ class _EarningDetailsPageState extends State<EarningDetailsPage> {
           ),
         ),
         centerTitle: true,
+        // ================= ADDED: 3-DOT MENU =================
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, color: Color(0xFF1E293B)),
+            color: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            onSelected: (value) {
+              if (value == 'payment_history') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    // Make sure PaymentHistoryPage is imported!
+                    builder: (context) => const PaymentHistoryPage(),
+                  ),
+                );
+              }
+            },
+            itemBuilder: (BuildContext context) {
+              return [
+                const PopupMenuItem<String>(
+                  value: 'payment_history',
+                  child: Row(
+                    children: [
+                      Icon(Icons.history, color: Color(0xFF1F8EB6), size: 20),
+                      SizedBox(width: 10),
+                      Text(
+                        'Payment History',
+                        style: TextStyle(
+                          color: Color(0xFF1E293B),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ];
+            },
+          ),
+        ],
+        // ================= END OF 3-DOT MENU =================
       ),
       body: Column(
         children: [
-          // LIFETIME & PERIOD STATS CARD
+          // COMPACT TOP CARD
           FutureBuilder<Map<String, dynamic>>(
             future: _lifetimeStatsFuture,
             builder: (context, snapshot) {
@@ -175,12 +215,12 @@ class _EarningDetailsPageState extends State<EarningDetailsPage> {
               return FutureBuilder<List<dynamic>>(
                 future: _fetchFilteredActivities(),
                 builder: (context, activitySnapshot) {
-                  final activities = activitySnapshot.data ?? [];
-                  int periodCount = activities.length;
+                  final activitiesList = activitySnapshot.data ?? [];
+                  int periodCount = activitiesList.length;
                   int periodEarn = periodCount * 2;
                   return Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: _buildCombinedHeader(
+                    padding: const EdgeInsets.all(16),
+                    child: _buildCompactHeader(
                       snapshot.connectionState == ConnectionState.waiting,
                       stats['count'],
                       stats['earn'],
@@ -193,44 +233,54 @@ class _EarningDetailsPageState extends State<EarningDetailsPage> {
             },
           ),
 
+          // CONTROLS SECTION
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: [
+                _buildPeriodSelector(),
+                const SizedBox(height: 12),
+                if (selectedPeriod != 'Custom') _buildTimelineHeader(),
+                const SizedBox(height: 10),
+                if (selectedPeriod == 'Weekly')
+                  _buildWeeklyTimeline()
+                else if (selectedPeriod == 'Monthly')
+                  _buildMonthlyTimeline()
+                else
+                  _buildCustomRangeHeader(),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // ENTRIES LIST (More Space Provided)
           Expanded(
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                children: [
-                  _buildPeriodSelector(),
-                  const SizedBox(height: 15),
-                  if (selectedPeriod != 'Custom') _buildTimelineHeader(),
-                  const SizedBox(height: 10),
-                  if (selectedPeriod == 'Weekly')
-                    _buildWeeklyTimeline()
-                  else if (selectedPeriod == 'Monthly')
-                    _buildMonthlyTimeline()
-                  else
-                    _buildCustomRangeHeader(),
-                  const SizedBox(height: 20),
-                  Expanded(
-                    child: FutureBuilder<List<dynamic>>(
-                      future: _fetchFilteredActivities(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting)
-                          return const Center(
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          );
-                        final activities = snapshot.data ?? [];
-                        return activities.isEmpty
-                            ? _buildEmptyState()
-                            : ListView.builder(
-                                padding: const EdgeInsets.only(bottom: 20),
-                                itemCount: activities.length,
-                                itemBuilder: (context, index) =>
-                                    _buildActivityTile(activities[index]),
-                              );
-                      },
-                    ),
-                  ),
-                ],
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+              ),
+              child: FutureBuilder<List<dynamic>>(
+                future: _fetchFilteredActivities(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    );
+                  }
+                  final activitiesResult = snapshot.data ?? [];
+                  return activitiesResult.isEmpty
+                      ? SingleChildScrollView(child: _buildEmptyState())
+                      : ListView.builder(
+                          padding: const EdgeInsets.only(top: 24, bottom: 20),
+                          itemCount: activitiesResult.length,
+                          itemBuilder: (context, index) =>
+                              _buildActivityTile(activitiesResult[index]),
+                        );
+                },
               ),
             ),
           ),
@@ -239,111 +289,125 @@ class _EarningDetailsPageState extends State<EarningDetailsPage> {
     );
   }
 
-  Widget _buildCombinedHeader(
+  Widget _buildCompactHeader(
     bool loading,
     int totalCount,
     int totalEarn,
     int pCount,
     int pEarn,
   ) {
-    String pLabel = "Today";
-    if (selectedPeriod == 'Weekly')
-      pLabel = "Selected Day";
-    else if (selectedPeriod == 'Monthly')
-      pLabel = "Monthly";
-    else if (selectedPeriod == 'Custom')
-      pLabel = "Range";
+    String pLabel = selectedPeriod == 'Weekly'
+        ? "Selected Day"
+        : (selectedPeriod == 'Monthly' ? "Monthly" : "Range");
 
     return Container(
-      width: double.infinity,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1F8EB6), Color(0xFF1F8EB6)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: const Color(0xFF1F8EB6),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFF1F8EB6).withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                const Text(
-                  "LIFETIME TOTAL EARNINGS",
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  loading ? "₹..." : "₹$totalEarn",
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 36,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                Text(
-                  "$totalCount Lifetime Entries",
-                  style: const TextStyle(color: Colors.white60, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.12),
-              borderRadius: const BorderRadius.vertical(
-                bottom: Radius.circular(24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildStatItem(
+                "LIFETIME EARNINGS",
+                "₹$totalEarn",
+                "$totalCount Entries",
+                loading,
               ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildSubStat("$pLabel Entries", "$pCount"),
-                Container(width: 1, height: 25, color: Colors.white24),
-                _buildSubStat("$pLabel Earnings", "₹$pEarn"),
-              ],
-            ),
+              Container(width: 1, height: 40, color: Colors.white24),
+              _buildStatItem(
+                "$pLabel".toUpperCase(),
+                "₹$pEarn",
+                "$pCount Entries",
+                false,
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSubStat(String label, String val) => Column(
-    children: [
-      Text(
-        label,
-        style: const TextStyle(
-          color: Colors.white70,
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
-        ),
+  Widget _buildStatItem(String label, String value, String sub, bool loading) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            loading ? "₹..." : value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          Text(
+            sub,
+            style: const TextStyle(color: Colors.white54, fontSize: 10),
+          ),
+        ],
       ),
-      const SizedBox(height: 2),
-      Text(
-        val,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 16,
-        ),
-      ),
-    ],
+    );
+  }
+
+  Widget _buildPeriodSelector() => Container(
+    height: 46,
+    padding: const EdgeInsets.all(4),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: Colors.grey.shade200),
+    ),
+    child: Row(
+      children: ['Weekly', 'Monthly', 'Custom'].map((p) {
+        bool isSel = selectedPeriod == p;
+        return Expanded(
+          child: GestureDetector(
+            onTap: () => setState(() {
+              selectedPeriod = p;
+              _viewDate = DateTime.now();
+              if (p == 'Custom' && _customRange == null) _pickCustomRange();
+            }),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: isSel ? const Color(0xFF1F8EB6) : Colors.transparent,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                p,
+                style: TextStyle(
+                  color: isSel ? Colors.white : const Color(0xFF64748B),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    ),
   );
 
   Widget _buildTimelineHeader() {
@@ -404,49 +468,9 @@ class _EarningDetailsPageState extends State<EarningDetailsPage> {
         child: Icon(
           icon,
           size: 20,
-          color: onTap == null ? Colors.grey.shade300 : const Color(0xFF6366F1),
+          color: onTap == null ? Colors.grey.shade300 : const Color(0xFF1F8EB6),
         ),
       ),
-    ),
-  );
-
-  Widget _buildPeriodSelector() => Container(
-    height: 50,
-    padding: const EdgeInsets.all(4),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: Colors.grey.shade200),
-    ),
-    child: Row(
-      children: ['Weekly', 'Monthly', 'Custom'].map((p) {
-        bool isSel = selectedPeriod == p;
-        return Expanded(
-          child: GestureDetector(
-            onTap: () => setState(() {
-              selectedPeriod = p;
-              _viewDate = DateTime.now();
-              if (p == 'Custom' && _customRange == null) _pickCustomRange();
-            }),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: isSel ? const Color(0xFF1F8EB6) : Colors.transparent,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                p,
-                style: TextStyle(
-                  color: isSel ? Colors.white : const Color(0xFF64748B),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          ),
-        );
-      }).toList(),
     ),
   );
 
@@ -605,7 +629,7 @@ class _EarningDetailsPageState extends State<EarningDetailsPage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withOpacity(0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -616,7 +640,7 @@ class _EarningDetailsPageState extends State<EarningDetailsPage> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: const Color(0xFFEEF2FF),
+              color: const Color(0xFFF1F5F9),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
@@ -665,8 +689,9 @@ class _EarningDetailsPageState extends State<EarningDetailsPage> {
 
   Widget _buildEmptyState() => Center(
     child: Padding(
-      padding: const EdgeInsets.all(40),
+      padding: const EdgeInsets.symmetric(vertical: 60),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.inbox_rounded, size: 60, color: Colors.grey.shade300),
           const SizedBox(height: 16),

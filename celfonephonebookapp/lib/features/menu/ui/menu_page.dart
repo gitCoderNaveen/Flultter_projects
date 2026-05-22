@@ -46,6 +46,11 @@ class MenuPage extends StatelessWidget {
 
           // Analytics
           ListTile(
+            leading: const Icon(Icons.notes_rounded),
+            title: const Text('About us'),
+            onTap: () => context.push('/about_us'),
+          ),
+          ListTile(
             leading: const Icon(Icons.search),
             title: const Text('Reverse Number Finder'),
             onTap: () => context.push('/reverse_number_finder'),
@@ -61,25 +66,15 @@ class MenuPage extends StatelessWidget {
             onTap: () => context.push('/combo_offers'),
           ),
           ListTile(
-            leading: const Icon(Icons.notes_rounded),
-            title: const Text('About us'),
-            onTap: () => context.push('/about_us'),
-          ),
-          ListTile(
-            leading: const Icon(Icons.connect_without_contact),
-            title: const Text('Contact us'),
-            onTap: () => context.push('/contact_us'),
-          ),
-          ListTile(
             leading: const Icon(Icons.admin_panel_settings),
             title: const Text('Admin Panel'),
             onTap: () => context.push('/admin_panel'),
           ),
-          ListTile(
-            leading: const Icon(Icons.person),
-            title: const Text('Lions Club'),
-            onTap: () => context.push('/lions_club'),
-          ),
+          // ListTile(
+          //   leading: const Icon(Icons.person),
+          //   title: const Text('Lions Club'),
+          //   onTap: () => context.push('/lions_club'),
+          // ),
           ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('Opt-Out'),
@@ -89,6 +84,11 @@ class MenuPage extends StatelessWidget {
             leading: const Icon(Icons.verified),
             title: const Text('OTP-Verifiation'),
             onTap: () => context.push('/send_otp'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.connect_without_contact),
+            title: const Text('Contact us'),
+            onTap: () => context.push('/contact_us'),
           ),
         ],
       ),

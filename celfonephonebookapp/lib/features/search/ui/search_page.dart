@@ -68,8 +68,30 @@ class _SearchPageState extends State<SearchPage> {
 
       return;
     }
+    if (params.containsKey('expo_id')) {
+      _searchByExpo(params['expo_id']!);
+      return;
+    }
 
     _fetchDefault();
+  }
+
+  Future<void> _searchByExpo(String expoId) async {
+    setState(() => _loading = true);
+
+    final res = await supabase
+        .from('profiles')
+        .select('*, expo:expo_id(expo_edition)')
+        .eq('expo_id', expoId)
+        .order('is_prime', ascending: false)
+        .order('priority', ascending: false)
+        .order('normal_list', ascending: false)
+        .order('is_business', ascending: false);
+
+    setState(() {
+      _results = res;
+      _loading = false;
+    });
   }
 
   Future<void> _fetchCities() async {
@@ -155,7 +177,9 @@ class _SearchPageState extends State<SearchPage> {
       condition = 'keywords.ilike.%$query%';
     }
 
-    var queryBuilder = supabase.from('profiles').select();
+    var queryBuilder = supabase
+        .from('profiles')
+        .select('*, expo:expo_id(expo_edition)');
 
     if (_filter == SearchFilter.city && _selectedCity != null) {
       queryBuilder = queryBuilder.ilike('city', '%$_selectedCity%');

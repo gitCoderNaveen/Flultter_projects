@@ -130,14 +130,14 @@ class _DiscountGreetingCardWidgetState extends State<DiscountGreetingCardWidget>
                 left: 0,
                 right: 0,
                 child: Center(
-                  child: Text(
-                    "Celfon Discount Card",
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
+                  // child: Text(
+                  //   "Celfon Discount Card",
+                  //   style: const TextStyle(
+                  //     fontSize: 22,
+                  //     fontWeight: FontWeight.bold,
+                  //     color: Colors.black87,
+                  //   ),
+                  // ),
                 ),
               ),
 

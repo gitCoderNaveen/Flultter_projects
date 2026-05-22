@@ -31,9 +31,9 @@ class _SendOtpPageState extends State<SendOtpPage> {
     try {
       // 🔥 CALL YOUR SMS API HERE
       final response = await http.post(
-        Uri.parse("http://bhashsms.com/api/sendmsgutil.php?user=Celfon_bwa&pass=123456&sender=BUZWAP&phone=$cleanPhone&text=celfon_otp&priority=wa&stype=auth&Params=$otp"),
+        Uri.parse("http://bhashsms.com/api/sendmsg.php?user=Celfon_SMS&pass=123456&sender=CELFON&phone=$cleanPhone&text=Your%20OTP%20for%20Signpost%20Celfon5G%20is:$otp.%20Use%20this%20OTP%20to%20verify%20your%20account.%20Do%20not%20share%20OTP%20with%20anyone.&priority=ndnd&stype=normal"),
         body: {"phone": cleanPhone, "otp": otp},
-      );
+      ); 
 
       if (response.statusCode == 200) {
         // 🔥 Delete old OTPs (important)
@@ -41,7 +41,6 @@ class _SendOtpPageState extends State<SendOtpPage> {
             .from('otp_verifications')
             .delete()
             .eq('phone', cleanPhone);
-
         // 🔥 Insert new OTP
         await Supabase.instance.client.from('otp_verifications').insert({
           'phone': cleanPhone,

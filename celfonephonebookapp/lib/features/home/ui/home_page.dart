@@ -2,6 +2,7 @@ import 'package:celfonephonebookapp/core/services/profile_service.dart';
 import 'package:celfonephonebookapp/core/services/supabase_service.dart';
 import 'package:celfonephonebookapp/features/home/controller/popular_firm_controller.dart';
 import 'package:celfonephonebookapp/features/home/model/directory_model.dart';
+import 'package:celfonephonebookapp/features/home/model/expo_diary_section.dart';
 import 'package:celfonephonebookapp/features/home/model/home_category_section.dart';
 import 'package:celfonephonebookapp/features/home/model/play_book_model.dart';
 import 'package:flutter/material.dart';
@@ -11,7 +12,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../controller/home_controller.dart';
 import '../service/home_service.dart';
 import 'dart:async';
-
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -47,6 +47,7 @@ class _HomeView extends StatelessWidget {
             child: HomeCategoriesSection(title: 'Popular Categories B2B'),
           ),
           SliverToBoxAdapter(child: OnlineDirectorySection()),
+          SliverToBoxAdapter(child: ExpoDiarySection()),
           SliverToBoxAdapter(child: _PopularFirms()),
           SliverToBoxAdapter(child: PlayBooksSection()),
         ],

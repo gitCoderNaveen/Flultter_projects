@@ -240,6 +240,22 @@ class AppRouter {
             pageBuilder: (context, state) =>
                 AppRouter._slidePage(PrivacyOptOutPage()),
           ),
+          GoRoute(
+            path: '/otp_verification',
+            pageBuilder: (context, state) {
+              final phone = state.extra as String;
+
+              return AppRouter._slidePage(VerifyOtpPage(phone: phone));
+            },
+          ),
+          GoRoute(
+            path: '/verify_success',
+            builder: (context, state) {
+              final phone = state.extra as String;
+
+              return VerifySuccessPage(phone: phone);
+            },
+          ),
         ],
       ),
       GoRoute(
@@ -275,19 +291,6 @@ class AppRouter {
         path: '/send_otp',
         pageBuilder: (context, state) => AppRouter._slidePage(SendOtpPage()),
       ),
-      GoRoute(
-        path: '/otp_verification',
-        pageBuilder: (context, state) {
-          final phone = state.extra as String;
-
-          return AppRouter._slidePage(VerifyOtpPage(phone: phone));
-        },
-      ),
-      GoRoute(
-        path: '/verify_success',
-        pageBuilder: (context, state) => AppRouter._slidePage(VerifySuccessPage()),
-      ),
-      
 
       GoRoute(
         path: '/ad/:id',

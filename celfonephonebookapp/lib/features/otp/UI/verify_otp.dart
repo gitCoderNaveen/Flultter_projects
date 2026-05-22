@@ -23,22 +23,38 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
   }
 
   Future<bool> verifyOtp(String phone, String enteredOtp) async {
-    final cleanOtp = enteredOtp.trim();
-    final cleanPhone = phone.trim();
+    try {
+      final cleanPhone = phone.replaceAll(RegExp(r'\D'), '');
 
-    final response = await Supabase.instance.client
-        .from('otp_verifications')
-        .select()
-        .eq('phone', cleanPhone) // ✅ FIXED
-        .order('created_at', ascending: false)
-        .limit(1)
-        .maybeSingle();
+      /// ✅ CHECK OTP
+      final result = await Supabase.instance.client
+          .from('otp_verifications')
+          .select()
+          .eq('phone', cleanPhone)
+          .eq('otp', enteredOtp)
+          .maybeSingle();
 
-    if (response == null) return false;
+      if (result == null) {
+        return false;
+      }
 
-    final dbOtp = response['otp'].toString().trim();
+      /// ✅ UPDATE VERIFIED COLUMN
+      await Supabase.instance.client
+          .from('s_profiles')
+          .update({'verified': true})
+          .eq('phone', cleanPhone);
 
-    return dbOtp == cleanOtp;
+      /// ✅ DELETE OTP AFTER SUCCESS
+      await Supabase.instance.client
+          .from('otp_verifications')
+          .delete()
+          .eq('phone', cleanPhone);
+
+      return true;
+    } catch (e) {
+      debugPrint("Verify OTP Error: $e");
+      return false;
+    }
   }
 
   Future<void> handleVerify() async {
@@ -64,8 +80,8 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
           ),
         );
 
-        // 👉 Navigate to home
-        context.go('/verify_success');
+        /// ✅ SEND PHONE NUMBER
+        context.go('/verify_success', extra: widget.phone);
       } else {
         ScaffoldMessenger.of(
           context,

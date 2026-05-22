@@ -35,6 +35,12 @@ class HomeService {
     return (response as List).map((e) => DirectoryModel.fromJson(e)).toList();
   }
 
+  // Future<List<DiaryModel>> fetchExpo() async{
+  //   final response = await SupbaseService.client
+  //   .from('expo')
+  //   .select()
+  //   .order(column)
+  // }
   Future<List<CategoryItemModel>> fetchCategories() async {
     try {
       final res = await SupabaseService.client.from('tiles_titles').select();

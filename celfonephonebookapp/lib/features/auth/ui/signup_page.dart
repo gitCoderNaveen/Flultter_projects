@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:celfonephonebookapp/core/services/supabase_service.dart';
 import 'package:celfonephonebookapp/features/auth/ui/login_page.dart';
@@ -6,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:http/http.dart' as http;
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -27,6 +29,56 @@ class _SignupPageState extends State<SignupPage> {
 
   bool _validateIndianMobile(String value) {
     return RegExp(r'^[6-9]\d{9}$').hasMatch(value);
+  }
+  bool loading = false;
+
+  String generateOtp() {
+    final random = Random();
+    return (1000 + random.nextInt(9000)).toString();
+  }
+
+
+  Future<void> sendOtp(String phone) async {
+    if (phone.isEmpty) return;
+
+    final cleanPhone = phone.replaceAll(RegExp(r'\D'), '');
+    final otp = generateOtp();
+
+    setState(() => loading = true);
+
+    try {
+      // 🔥 CALL YOUR SMS API HERE
+      final response = await http.post(
+        Uri.parse("http://bhashsms.com/api/sendmsg.php?user=Celfon_SMS&pass=123456&sender=CELFON&phone=$cleanPhone&text=Your%20OTP%20for%20Signpost%20Celfon5G%20is:$otp.%20Use%20this%20OTP%20to%20verify%20your%20account.%20Do%20not%20share%20OTP%20with%20anyone.&priority=ndnd&stype=normal"),
+        body: {"phone": cleanPhone, "otp": otp},
+      ); 
+
+      if (response.statusCode == 200) {
+        // 🔥 Delete old OTPs (important)
+        await Supabase.instance.client
+            .from('otp_verifications')
+            .delete()
+            .eq('phone', cleanPhone);
+        // 🔥 Insert new OTP
+        await Supabase.instance.client.from('otp_verifications').insert({
+          'phone': cleanPhone,
+          'otp': otp,
+        });
+
+        // ✅ Navigate
+        context.go('/otp_verification', extra: cleanPhone);
+      } else {
+        throw Exception("Failed to send OTP");
+      }
+    } catch (e) {
+      debugPrint("Error: $e");
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Failed to send OTP")));
+    }
+
+    setState(() => loading = false);
   }
 
   Future<void> _signup() async {
@@ -53,11 +105,7 @@ class _SignupPageState extends State<SignupPage> {
     try {
       String phone = _phoneController.text.trim();
       String name = _nameController.text.trim();
-
-      // Add +91 automatically if missing
-      if (!phone.startsWith('+')) {
-        phone = '+91$phone';
-      }
+  
 
       /// 🔐 DEFAULT PASSWORD
       const String defaultPassword = 'celfonbook';
@@ -81,8 +129,8 @@ class _SignupPageState extends State<SignupPage> {
       });
 
       if (!mounted) return;
-
-      _showSuccessPopup(phone, name);
+     await sendOtp(phone); 
+      // _showSuccessPopup(phone, name);
     } on AuthException catch (e) {
       setState(() => _error = e.message);
     } catch (e) {
