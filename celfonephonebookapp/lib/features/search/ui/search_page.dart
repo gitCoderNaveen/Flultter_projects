@@ -69,20 +69,63 @@ class _SearchPageState extends State<SearchPage> {
       return;
     }
     if (params.containsKey('expo_id')) {
-      _searchByExpo(params['expo_id']!);
+      _searchByExpo(params['expo_id']!, '');
       return;
     }
 
     _fetchDefault();
   }
 
-  Future<void> _searchByExpo(String expoId) async {
+  // Future<void> _searchByExpo(String expoId) async {
+  //   setState(() => _loading = true);
+
+  //   final res = await supabase
+  //       .from('profiles')
+  //       .select('*, expo:expo_id(expo_edition)')
+  //       .eq('expo_id', expoId)
+  //       .order('is_prime', ascending: false)
+  //       .order('priority', ascending: false)
+  //       .order('normal_list', ascending: false)
+  //       .order('is_business', ascending: false);
+
+  //   setState(() {
+  //     _results = res;
+  //     _loading = false;
+  //   });
+  // }
+  Future<void> _searchByExpo(String expoId, String query) async {
     setState(() => _loading = true);
 
-    final res = await supabase
+    var queryBuilder = supabase
         .from('profiles')
         .select('*, expo:expo_id(expo_edition)')
-        .eq('expo_id', expoId)
+        .not('expo_id', 'is', null) // only profiles having Expo_id
+        .eq('expo_id', expoId);
+
+    // city filter
+    if (_filter == SearchFilter.city && _selectedCity != null) {
+      queryBuilder = queryBuilder.ilike('city', '%$_selectedCity%');
+    }
+
+    // apply search only if query exists
+    if (query.trim().isNotEmpty) {
+      String condition;
+
+      final activeFilter = _filter == SearchFilter.city
+          ? _citySearchType
+          : _filter;
+
+      if (activeFilter == SearchFilter.business) {
+        condition =
+            'and(expo_id.not.is.null,or(business_name.ilike.%$query%,person_name.ilike.%$query%))';
+      } else {
+        condition = 'and(expo_id.not.is.null,keywords.ilike.%$query%)';
+      }
+
+      queryBuilder = queryBuilder.or(condition);
+    }
+
+    final res = await queryBuilder
         .order('is_prime', ascending: false)
         .order('priority', ascending: false)
         .order('normal_list', ascending: false)

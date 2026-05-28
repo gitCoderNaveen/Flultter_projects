@@ -1,10 +1,13 @@
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:http/http.dart' as http;
 
 class MediaPartnerPage extends StatefulWidget {
   const MediaPartnerPage({super.key});
@@ -302,6 +305,12 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
   };
 
   String? _activeField;
+  bool loading = false;
+
+  String _generateOtp() {
+    final random = Random();
+    return (1000 + random.nextInt(9000)).toString();
+  }
 
   Future<void> _showImagePickerOptions() async {
     showModalBottomSheet(
@@ -344,8 +353,8 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
 
     TextEditingController messageController = TextEditingController(
       text: isPersonTab
-          ? "Dear $nameText, CELFON BOOK is a Mobile App, with profiles of lakhs of mobile users. Your Details are also added based on field survay, online data, You are listed under your profession ${profession?.toUpperCase()??''}. Kindly verify your details by clicking CELFON BOOK App at ${link}. "
-          : "Dear $nameText CELFON BOOK is a Mobile App, with profiles of lakhs of mobile users. Your Firm ${businessName} is also added based on field survay, online data. You are listed under keywords ${keywords?.toUpperCase()??''}. Kindly verify your details by clicking CELFON BOOK App at ${link}.",
+          ? "Dear $nameText, CELFON BOOK is a Mobile App, with profiles of lakhs of mobile users. Your Details are also added based on field survay, online data, You are listed under your profession ${profession?.toUpperCase() ?? ''}. Kindly verify your details by clicking CELFON BOOK App at ${link}. "
+          : "Dear $nameText CELFON BOOK is a Mobile App, with profiles of lakhs of mobile users. Your Firm ${businessName} is also added based on field survay, online data. You are listed under keywords ${keywords?.toUpperCase() ?? ''}. Kindly verify your details by clicking CELFON BOOK App at ${link}.",
     );
 
     showDialog(
@@ -538,10 +547,7 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
       return;
     }
     if (selectedPrefix.isEmpty) {
-      _showSnackBar(
-        "Please Select The Prefix Mr. or Mrs.",
-        Colors.red,
-      );
+      _showSnackBar("Please Select The Prefix Mr. or Mrs.", Colors.red);
       return;
     }
 
@@ -670,6 +676,58 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
     }
   }
 
+  Future<void> sendOtp(String phone) async {
+    if (phone.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Enter mobile number"),
+      ),
+    );
+    return;
+  }
+
+    final cleanPhone = phone.replaceAll(RegExp(r'\D'), '');
+    final otp = _generateOtp();
+
+    setState(() => loading = true);
+
+    try {
+      // 🔥 CALL YOUR SMS API HERE
+      final response = await http.post(
+        Uri.parse(
+          "http://bhashsms.com/api/sendmsg.php?user=Celfon_SMS&pass=123456&sender=CELFON&phone=$cleanPhone&text=Your%20OTP%20for%20Signpost%20Celfon5G%20is:$otp.%20Use%20this%20OTP%20to%20verify%20your%20account.%20Do%20not%20share%20OTP%20with%20anyone.&priority=ndnd&stype=normal",
+        ),
+        body: {"phone": cleanPhone, "otp": otp},
+      );
+
+      if (response.statusCode == 200) {
+        // 🔥 Delete old OTPs (important)
+        await Supabase.instance.client
+            .from('otp_verifications')
+            .delete()
+            .eq('phone', cleanPhone);
+        // 🔥 Insert new OTP
+        await Supabase.instance.client.from('otp_verifications').insert({
+          'phone': cleanPhone,
+          'otp': otp,
+        });
+
+        // ✅ Navigate
+        context.go('/otp_verification', extra: cleanPhone);
+      } else {
+        throw Exception("Failed to send OTP");
+      }
+    } catch (e) {
+      debugPrint("Error: $e");
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Failed to send OTP")));
+    }
+
+    setState(() => loading = false);
+  }
+
   void _showSnackBar(String msg, Color color) {
     ScaffoldMessenger.of(
       context,
@@ -776,7 +834,42 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
 
               const SizedBox(height: 30),
 
+              /// GENERATE OTP TOGGLE
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Generate OTP",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+
+                    Switch(
+                      value: generateOtp,
+                      activeColor: const Color(0xFF1F8EB6),
+                      onChanged: (value) {
+                        setState(() {
+                          generateOtp = value;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
               /// SAVE BUTTON
+              /// BUTTON
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -784,12 +877,19 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1F8EB6),
                   ),
-                  onPressed: _isLoading ? null : _showPreview,
+                  onPressed: _isLoading
+                      ? null
+                      : generateOtp
+                      ? ()=>sendOtp(_mobileController.text.trim())
+                      : _showPreview,
                   child: _isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text(
-                          "Save",
-                          style: TextStyle(fontSize: 18, color: Colors.white),
+                      : Text(
+                          generateOtp ? "Send OTP" : "Save",
+                          style: const TextStyle(
+                            fontSize: 18,
+                            color: Colors.white,
+                          ),
                         ),
                 ),
               ),

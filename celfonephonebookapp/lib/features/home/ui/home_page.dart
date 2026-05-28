@@ -994,15 +994,19 @@ class _OnlineDirectorySectionState extends State<OnlineDirectorySection> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
             "Online Directory",
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 22, // Clean UI kaga size light-ah adjust panni iruken
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1E293B),
+            ),
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 12),
 
           FutureBuilder<List<DirectoryModel>>(
             future: future,
@@ -1019,13 +1023,17 @@ class _OnlineDirectorySectionState extends State<OnlineDirectorySection> {
 
               return GridView.builder(
                 shrinkWrap: true,
+                primary: false,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: items.length,
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2, // 🔥 EXACT like image
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio: 1,
+                  crossAxisCount:
+                      3, // 🔥 FIXED: Ippo ore row-la 3 items clean-ah varum bro
+                  crossAxisSpacing:
+                      10, // 3 items nirkira nala spacing thagumari adjust panni iruken
+                  mainAxisSpacing: 10,
+                  childAspectRatio:
+                      0.95, // Image geometry stretch aagama square aspect ratio manage panna
                 ),
                 itemBuilder: (_, index) {
                   final item = items[index];
@@ -1033,12 +1041,24 @@ class _OnlineDirectorySectionState extends State<OnlineDirectorySection> {
                   return GestureDetector(
                     onTap: () {
                       final city = Uri.encodeComponent(item.city);
-
-                      context.push('/search?city=$city'); // ✅ PASS CITY
+                      context.push('/search?city=$city');
                     },
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(item.imageUrl, fit: BoxFit.cover),
+                      borderRadius: BorderRadius.circular(
+                        12,
+                      ), // Image corners rounded styling
+                      child: Container(
+                        decoration: BoxDecoration(
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Image.network(item.imageUrl, fit: BoxFit.cover),
+                      ),
                     ),
                   );
                 },

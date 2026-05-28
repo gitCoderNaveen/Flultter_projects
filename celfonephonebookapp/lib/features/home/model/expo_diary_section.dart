@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -22,9 +23,7 @@ class _ExpoDiarySectionState extends State<ExpoDiarySection> {
   }
 
   Future<void> fetchExpos() async {
-    final res = await supabase
-        .from('expo')
-        .select();
+    final res = await supabase.from('expo').select();
 
     setState(() {
       expos = res;
@@ -42,85 +41,64 @@ class _ExpoDiarySectionState extends State<ExpoDiarySection> {
       return const SizedBox();
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Text(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
             "Expo Diary",
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
+              color: Color(0xFF1E293B),
             ),
           ),
-        ),
+          const SizedBox(height: 12),
 
-        SizedBox(
-          height: 220,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
+          // --- HORIZONTAL TO GRID UPGRADE (3 ITEMS PER ROW) ---
+          GridView.builder(
+            shrinkWrap: true,
+            primary: false,
+            physics: const NeverScrollableScrollPhysics(),
             itemCount: expos.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3, // 🔥 Ore row-la 3 items set aiyidum bro
+              crossAxisSpacing: 10, // Proper side gaps
+              mainAxisSpacing: 10, // Proper bottom gaps
+              childAspectRatio:
+                  0.95, // Accurate frame alignment matching directory
+            ),
             itemBuilder: (_, index) {
               final expo = expos[index];
 
               return GestureDetector(
                 onTap: () {
-                  context.push(
-                    '/search?expo_id=${expo['id']}',
-                  );
+                  context.push('/search?expo_id=${expo['id']}');
                 },
-
-                child: Container(
-                  width: 180,
-                  margin: const EdgeInsets.only(left: 16, bottom: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(.08),
-                        blurRadius: 8,
-                      ),
-                    ],
-                  ),
-
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(16),
-                          ),
-                          child: Image.network(
-                            expo['expo_image'],
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                          ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
                         ),
-                      ),
-
-                      Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Text(
-                          expo['expo_name'] ?? '',
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
+                    child: Image.network(
+                      expo['expo_image'] ?? '',
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
               );
             },
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
