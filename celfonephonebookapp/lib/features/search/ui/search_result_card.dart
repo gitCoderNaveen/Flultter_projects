@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../model/search_filter.dart';
 import 'package:celfonephonebookapp/features/search/service/discount_greeting_service.dart';
+import 'package:celfonephonebookapp/features/search/ui/view_service.dart';
+import 'package:celfonephonebookapp/features/search/service/lead_service.dart';
 
 class SearchResultCard extends StatelessWidget {
   final Map item;
@@ -33,6 +35,8 @@ class SearchResultCard extends StatelessWidget {
     final expoData = item['expo'];
     final String expoEdition = expoData?['expo_edition'] ?? "";
     final String stallNo = item['stall_no'] ?? "";
+    final ViewService _viewService = ViewService();
+    final LeadService _leadService = LeadService();
 
     String name;
 
@@ -84,7 +88,10 @@ class SearchResultCard extends StatelessWidget {
     }
 
     return GestureDetector(
-      onTap: () {
+      onTap: () async{
+        await _viewService.saveView(item);
+        
+
         final id = item['id'].toString();
         final isPrime = item['is_prime'] == true;
         final isBusiness =
@@ -97,6 +104,7 @@ class SearchResultCard extends StatelessWidget {
         } else {
           context.push('/free_model', extra: id);
         }
+        await _leadService.createLead(item);
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
