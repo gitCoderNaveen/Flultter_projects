@@ -21,7 +21,7 @@ class MenuPage extends StatelessWidget {
             ListTile(
               leading: const Icon(Icons.person),
               title: const Text('My Profile'),
-              onTap: () => context.push('/profile'),
+              onTap: () => context.push('/dashboard'),
             ),
 
           const Divider(),

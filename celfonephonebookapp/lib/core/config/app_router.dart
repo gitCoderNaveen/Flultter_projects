@@ -16,6 +16,8 @@ import 'package:celfonephonebookapp/features/menu/features/opt_out.dart';
 import 'package:celfonephonebookapp/features/model/ui/business_model_page.dart';
 import 'package:celfonephonebookapp/features/model/ui/free_model.dart';
 import 'package:celfonephonebookapp/features/model/ui/model_page.dart';
+import 'package:celfonephonebookapp/features/otp/UI/media_verify_otp.dart';
+import 'package:celfonephonebookapp/features/otp/UI/media_verify_success.dart';
 import 'package:celfonephonebookapp/features/otp/UI/send_otp.dart';
 import 'package:celfonephonebookapp/features/otp/UI/verify_otp.dart';
 import 'package:celfonephonebookapp/features/otp/UI/verify_success.dart';
@@ -23,6 +25,7 @@ import 'package:celfonephonebookapp/features/partner/features/earning_details/ui
 import 'package:celfonephonebookapp/features/partner/features/media_partner/ui/media_partner_page.dart';
 import 'package:celfonephonebookapp/features/partner/features/media_partner_guide.dart';
 import 'package:celfonephonebookapp/features/partner/ui/partner_page.dart';
+import 'package:celfonephonebookapp/features/profile/ui/dash_board.dart';
 import 'package:celfonephonebookapp/features/profile/ui/profile_page.dart';
 import 'package:celfonephonebookapp/features/profile/ui/profile_screen.dart';
 import 'package:celfonephonebookapp/features/promotions/features/categorywisepromotions/ui/categorywise_pro_page.dart';
@@ -143,6 +146,11 @@ class AppRouter {
                 AppRouter._slidePage(const ProfileScreen()),
           ),
           GoRoute(
+            path: '/dashboard',
+            pageBuilder: (context, state) =>
+                AppRouter._slidePage(const DashboardPage()),
+          ),
+          GoRoute(
             path: '/search',
             pageBuilder: (context, state) =>
                 AppRouter._slidePage(const SearchPage()),
@@ -156,6 +164,14 @@ class AppRouter {
             path: '/favorites',
             pageBuilder: (context, state) =>
                 AppRouter._slidePage(const FavoritePage()),
+          ),
+          GoRoute(
+            path: '/verify_success',
+            builder: (context, state) {
+              final phone = state.extra as String;
+
+              return VerifySuccessPage(phone: phone);
+            },
           ),
           GoRoute(
             path: '/nearby-promotion',
@@ -249,11 +265,27 @@ class AppRouter {
             },
           ),
           GoRoute(
+            path: '/media_otp_verification',
+            pageBuilder: (context, state) {
+              final phone = state.extra as String;
+
+              return AppRouter._slidePage(MediaVerifyOtp(phone: phone));
+            },
+          ),
+          GoRoute(
             path: '/verify_success',
             builder: (context, state) {
               final phone = state.extra as String;
 
               return VerifySuccessPage(phone: phone);
+            },
+          ),
+          GoRoute(
+            path: '/media_verify_success',
+            builder: (context, state) {
+              final phone = state.extra as String;
+
+              return MediaVerifySuccess(phone: phone);
             },
           ),
         ],

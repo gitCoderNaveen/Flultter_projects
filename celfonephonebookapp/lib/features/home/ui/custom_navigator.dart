@@ -14,69 +14,64 @@ class CustomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
 
-    return SizedBox(
-      height: 110,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      color: Colors.transparent, 
       child: Stack(
         alignment: Alignment.bottomCenter,
+        clipBehavior: Clip.none,
         children: [
-          /// 🔷 BACKGROUND BAR
-          Container(height: 70, width: width, color: const Color(0xFF2E8CA8)),
-
-          /// 🔵 CENTER SEARCH (Clickable)
-          Positioned(
-            bottom: 10,
-            child: GestureDetector(
-              onTap: () => onTap(2), // ✅ send index 2
-              child: Container(
-                width: 100,
-                height: 100,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF2E8CA8),
-                  shape: BoxShape.circle,
+          /// 🔷 MAIN FLOATING DOCK FRAME
+          Container(
+            height: 70,
+            width: width,
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E293B), // Premium Deep Slate Dark Color
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.search,
-                      size: 60,
-                      color: currentIndex == 2
-                          ? Colors.white
-                          : Colors.black, // ✅ active highlight
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      "Search",
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: currentIndex == 2
-                            ? Colors.white
-                            : Colors.white70,
-                        fontWeight: currentIndex == 2
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildItem(Icons.home_rounded, "Home", 0),
+                _buildItem(Icons.campaign_rounded, "Promotions", 1),
+                const SizedBox(width: 65), // Gap for center button
+                _buildItem(Icons.person_outline_rounded, "Partner", 3),
+                _buildItem(Icons.menu_rounded, "Menu", 4),
+              ],
             ),
           ),
 
-          /// 🔘 ITEMS
+          /// 🔵 POPPING FLOATING CENTER SEARCH
           Positioned(
-            bottom: 8,
-            child: SizedBox(
-              width: width,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildItem(Icons.home, "Home", 0),
-                  _buildItem(Icons.campaign, "Promotions", 1),
-                  const SizedBox(width: 60), // space for center
-                  _buildItem(Icons.person_outline, "Partner", 3),
-                  _buildItem(Icons.menu, "Menu", 4),
-                ],
+            bottom: 22,
+            child: GestureDetector(
+              onTap: () => onTap(2),
+              child: Container(
+                width: 66,
+                height: 66,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2E8CA8),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF2E8CA8).withOpacity(0.4),
+                      blurRadius: 14,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.search_rounded,
+                  size: 32,
+                  color: currentIndex == 2 ? Colors.white : Colors.white.withOpacity(0.8),
+                ),
               ),
             ),
           ),
@@ -87,23 +82,27 @@ class CustomNavBar extends StatelessWidget {
 
   Widget _buildItem(IconData icon, String label, int index) {
     final isActive = currentIndex == index;
-
     return GestureDetector(
       onTap: () => onTap(index),
       behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: SizedBox(
+        width: 65,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 26, color: isActive ? Colors.white : Colors.black),
+            Icon(
+              icon,
+              size: 24,
+              color: isActive ? const Color(0xFF2E8CA8) : Colors.white54,
+            ),
             const SizedBox(height: 4),
             Text(
               label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 14,
-                color: isActive ? Colors.white : Colors.white70,
+                fontSize: 11,
+                color: isActive ? Colors.white : Colors.white38,
                 fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
               ),
             ),

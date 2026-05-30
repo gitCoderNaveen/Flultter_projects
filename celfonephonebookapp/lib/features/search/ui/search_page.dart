@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:postgrest/postgrest.dart';
 
 import '../model/search_filter.dart';
 import '../ui/search_result_card.dart';
@@ -30,8 +31,17 @@ class _SearchPageState extends State<SearchPage> {
   List<String> _cities = [];
   String? _selectedCity;
 
+  String? _currentExpoId; // Expo ID filter
   bool _initialized = false;
   String _sortOption = 'date_desc';
+
+  /// Apply expo_id filter if available
+  PostgrestFilterBuilder _applyExpoFilter(dynamic query) {
+    if (_currentExpoId != null) {
+      return query.eq('expo_id', _currentExpoId!);
+    }
+    return query;
+  }
 
   @override
   void didChangeDependencies() {
@@ -42,6 +52,9 @@ class _SearchPageState extends State<SearchPage> {
 
     final uri = GoRouterState.of(context).uri;
     final params = uri.queryParameters;
+
+    // Always capture expo_id if present (for all search types)
+    _currentExpoId = params['expo_id'];
 
     if (params.containsKey('service')) {
       _productController.text = params['service']!;
@@ -69,67 +82,27 @@ class _SearchPageState extends State<SearchPage> {
       return;
     }
     if (params.containsKey('expo_id')) {
-      _searchByExpo(params['expo_id']!, '');
+      _searchByExpo(params['expo_id']!);
       return;
     }
 
     _fetchDefault();
   }
 
-  // Future<void> _searchByExpo(String expoId) async {
-  //   setState(() => _loading = true);
+  Future<void> _searchByExpo(String expoId) async {
+    setState(() {
+      _currentExpoId = expoId;
+      _loading = true;
+    });
 
-  //   final res = await supabase
-  //       .from('profiles')
-  //       .select('*, expo:expo_id(expo_edition)')
-  //       .eq('expo_id', expoId)
-  //       .order('is_prime', ascending: false)
-  //       .order('priority', ascending: false)
-  //       .order('normal_list', ascending: false)
-  //       .order('is_business', ascending: false);
-
-  //   setState(() {
-  //     _results = res;
-  //     _loading = false;
-  //   });
-  // }
-  Future<void> _searchByExpo(String expoId, String query) async {
-    setState(() => _loading = true);
-
-    var queryBuilder = supabase
-        .from('profiles')
-        .select('*, expo:expo_id(expo_edition)')
-        .not('expo_id', 'is', null) // only profiles having Expo_id
-        .eq('expo_id', expoId);
-
-    // city filter
-    if (_filter == SearchFilter.city && _selectedCity != null) {
-      queryBuilder = queryBuilder.ilike('city', '%$_selectedCity%');
-    }
-
-    // apply search only if query exists
-    if (query.trim().isNotEmpty) {
-      String condition;
-
-      final activeFilter = _filter == SearchFilter.city
-          ? _citySearchType
-          : _filter;
-
-      if (activeFilter == SearchFilter.business) {
-        condition =
-            'and(expo_id.not.is.null,or(business_name.ilike.%$query%,person_name.ilike.%$query%))';
-      } else {
-        condition = 'and(expo_id.not.is.null,keywords.ilike.%$query%)';
-      }
-
-      queryBuilder = queryBuilder.or(condition);
-    }
-
-    final res = await queryBuilder
-        .order('is_prime', ascending: false)
-        .order('priority', ascending: false)
-        .order('normal_list', ascending: false)
-        .order('is_business', ascending: false);
+    final res =
+        await _applyExpoFilter(
+              supabase.from('profiles').select('*, expo:expo_id(expo_edition)'),
+            )
+            .order('is_prime', ascending: false)
+            .order('priority', ascending: false)
+            .order('normal_list', ascending: false)
+            .order('is_business', ascending: false);
 
     setState(() {
       _results = res;
@@ -138,7 +111,9 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   Future<void> _fetchCities() async {
-    final res = await supabase.from('profiles').select('city');
+    final res = await _applyExpoFilter(
+      supabase.from('profiles').select('city'),
+    );
 
     final citySet = <String>{};
 
@@ -157,10 +132,9 @@ class _SearchPageState extends State<SearchPage> {
   Future<void> _fetchDefault() async {
     setState(() => _loading = true);
 
-    final res = await supabase
-        .from('profiles')
-        .select()
-        .order('created_at', ascending: false);
+    final res = await _applyExpoFilter(
+      supabase.from('profiles').select('*, expo:expo_id(expo_edition)'),
+    ).order('created_at', ascending: false);
 
     setState(() {
       _results = res;
@@ -176,14 +150,15 @@ class _SearchPageState extends State<SearchPage> {
 
     setState(() => _loading = true);
 
-    final res = await supabase
-        .from('profiles')
-        .select()
-        .ilike('city', '%$city%') // 👈 adjust column name if needed
-        .order('is_prime', ascending: false)
-        .order('priority', ascending: false)
-        .order('normal_list', ascending: false)
-        .order('is_business', ascending: false);
+    final res =
+        await _applyExpoFilter(
+              supabase.from('profiles').select('*, expo:expo_id(expo_edition)'),
+            )
+            .ilike('city', '%$city%')
+            .order('is_prime', ascending: false)
+            .order('priority', ascending: false)
+            .order('normal_list', ascending: false)
+            .order('is_business', ascending: false);
 
     setState(() {
       _results = res;
@@ -197,6 +172,7 @@ class _SearchPageState extends State<SearchPage> {
 
     if (query.trim().isEmpty) {
       if (_filter == SearchFilter.city && _selectedCity != null) {
+        // city selected + keyword clear pannina = city results matum (expo filter udane)
         _searchByCity(_selectedCity!);
       } else {
         _fetchDefault();
@@ -208,28 +184,34 @@ class _SearchPageState extends State<SearchPage> {
 
     setState(() => _loading = true);
 
-    String condition;
-
     final activeFilter = _filter == SearchFilter.city
         ? _citySearchType
         : _filter;
-
-    if (activeFilter == SearchFilter.business) {
-      condition = 'business_name.ilike.%$query%,person_name.ilike.%$query%';
-    } else {
-      condition = 'keywords.ilike.%$query%';
-    }
 
     var queryBuilder = supabase
         .from('profiles')
         .select('*, expo:expo_id(expo_edition)');
 
+    // Step 1: expo_id hard filter (must be before .or() to avoid bypass)
+    if (_currentExpoId != null) {
+      queryBuilder = queryBuilder.eq('expo_id', _currentExpoId!);
+    }
+
+    // Step 2: city filter
     if (_filter == SearchFilter.city && _selectedCity != null) {
       queryBuilder = queryBuilder.ilike('city', '%$_selectedCity%');
     }
 
+    // Step 3: business or product/keywords search
+    if (activeFilter == SearchFilter.business) {
+      queryBuilder = queryBuilder.or(
+        'business_name.ilike.%$query%,person_name.ilike.%$query%',
+      );
+    } else {
+      queryBuilder = queryBuilder.ilike('keywords', '%$query%');
+    }
+
     final res = await queryBuilder
-        .or(condition)
         .order('is_prime', ascending: false)
         .order('priority', ascending: false)
         .order('normal_list', ascending: false)
@@ -246,14 +228,15 @@ class _SearchPageState extends State<SearchPage> {
   Future<void> _searchByLetter(String letter) async {
     setState(() => _loading = true);
 
-    final res = await supabase
-        .from('profiles')
-        .select()
-        .ilike('business_name', '${letter.toUpperCase()}%')
-        .order('is_prime', ascending: false)
-        .order('priority', ascending: false)
-        .order('normal_list', ascending: false)
-        .order('is_business', ascending: false);
+    final res =
+        await _applyExpoFilter(
+              supabase.from('profiles').select('*, expo:expo_id(expo_edition)'),
+            )
+            .ilike('business_name', '${letter.toUpperCase()}%')
+            .order('is_prime', ascending: false)
+            .order('priority', ascending: false)
+            .order('normal_list', ascending: false)
+            .order('is_business', ascending: false);
 
     setState(() {
       _results = res;
@@ -276,7 +259,7 @@ class _SearchPageState extends State<SearchPage> {
   Future<void> _fetchSortedData() async {
     setState(() => _loading = true);
 
-    dynamic query = supabase.from('profiles').select();
+    dynamic query = _applyExpoFilter(supabase.from('profiles').select());
 
     switch (_sortOption) {
       case 'az':

@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-class VerifyOtpPage extends StatefulWidget {
+class MediaVerifyOtp extends StatefulWidget {
   final String phone;
-  const VerifyOtpPage({super.key, required this.phone});
+  const MediaVerifyOtp({super.key, required this.phone});
 
   @override
-  State<VerifyOtpPage> createState() => _VerifyOtpPageState();
+  State<MediaVerifyOtp> createState() => _MediaVerifyOtpState();
 }
 
-class _VerifyOtpPageState extends State<VerifyOtpPage> {
+class _MediaVerifyOtpState extends State<MediaVerifyOtp> {
   final List<TextEditingController> controllers = List.generate(
     4,
     (_) => TextEditingController(),
@@ -81,7 +81,10 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
           ),
         );
 
-        context.go('/verify_success', extra: widget.phone);
+        final result = await context.push('/media_verify_success', extra: widget.phone);
+        if(result == true && mounted){
+          context.pop(true);
+        }
 
       } else {
         ScaffoldMessenger.of(

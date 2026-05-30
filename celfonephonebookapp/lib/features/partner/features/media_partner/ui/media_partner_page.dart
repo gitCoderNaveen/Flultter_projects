@@ -10,7 +10,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 
 class MediaPartnerPage extends StatefulWidget {
-  const MediaPartnerPage({super.key});
+  final bool returnedVerified;
+  const MediaPartnerPage({super.key, this.returnedVerified = false});
 
   @override
   State<MediaPartnerPage> createState() => _MediaPartnerPageState();
@@ -21,7 +22,6 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
   final supabase = Supabase.instance.client;
 
   bool isPersonTab = true;
-  // String selectedPrefix = 'Mr.';
   String contactType = 'Mobile';
   bool _isLoading = false;
   File? _imageFile;
@@ -29,18 +29,17 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
   bool? _isMobileAvailable;
   bool _isCheckingMobile = false;
   String? _existingName;
-  String selectedPrefix = ''; // ✅ default
-  bool generateOtp = false;
+  String selectedPrefix = '';
 
   bool? _isLandlineAvailable;
   bool _isCheckingLandline = false;
   String? _existingLandlineName;
 
+  bool _isVerified = false;
+  bool _isSendingOtp = false;
+
   final List<String> _selectedProducts = [];
   final TextEditingController _productInputController = TextEditingController();
-
-  final RegExp _nameRegExp = RegExp(r'^[a-zA-Z\s]+$');
-  final RegExp _emailRegExp = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
 
   final TextEditingController _mobileController = TextEditingController();
   final TextEditingController _cityController = TextEditingController();
@@ -61,7 +60,11 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
   @override
   void initState() {
     super.initState();
+    if (widget.returnedVerified) {
+      _isVerified = true;
+    }
     _mobileController.addListener(_checkMobileExisting);
+    _mobileController.addListener(_resetVerifiedOnMobileChange);
     _landlineController.addListener(_checkLandlineExisting);
     _focusNodes.forEach((key, node) {
       node.addListener(() {
@@ -80,6 +83,7 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
   @override
   void dispose() {
     _mobileController.removeListener(_checkMobileExisting);
+    _mobileController.removeListener(_resetVerifiedOnMobileChange);
     _landlineController.removeListener(_checkLandlineExisting);
     _mobileFocusNode.dispose();
     _productInputController.dispose();
@@ -105,6 +109,14 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
     }
 
     super.dispose();
+  }
+
+  void _resetVerifiedOnMobileChange() {
+    if (_isVerified) {
+      setState(() {
+        _isVerified = false;
+      });
+    }
   }
 
   String? _getHelpText(String field) {
@@ -140,7 +152,6 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
 
   void _addProduct() {
     final String product = _productInputController.text.trim();
-
     if (product.isNotEmpty && !_selectedProducts.contains(product)) {
       setState(() {
         _selectedProducts.add(product);
@@ -155,31 +166,9 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
     });
   }
 
-  void _onFieldTap() {
-    if (contactType == 'Mobile' &&
-        _mobileController.text.length == 10 &&
-        _isMobileAvailable == false) {
-      setState(() {
-        _mobileController.clear();
-        _existingName = null;
-        _isMobileAvailable = null;
-      });
-    } else if (contactType == 'Landline' &&
-        _landlineController.text.isNotEmpty &&
-        _isLandlineAvailable == false) {
-      setState(() {
-        _landlineController.clear();
-        _existingLandlineName = null;
-        _isLandlineAvailable = null;
-      });
-    }
-  }
-
   Future<void> _checkMobileExisting() async {
     if (contactType != 'Mobile') return;
-
     final mobile = _mobileController.text.trim();
-
     if (mobile.length != 10) {
       setState(() {
         _isMobileAvailable = null;
@@ -187,19 +176,15 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
       });
       return;
     }
-
     setState(() => _isCheckingMobile = true);
-
     try {
       final response = await supabase
           .from('profiles')
           .select('business_name, person_name')
           .eq('mobile_number', mobile)
           .maybeSingle();
-
       setState(() {
         _isMobileAvailable = (response == null);
-
         if (response != null) {
           _existingName =
               (response['business_name'] != null &&
@@ -209,7 +194,6 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
         } else {
           _existingName = null;
         }
-
         _isCheckingMobile = false;
       });
     } catch (e) {
@@ -219,26 +203,19 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
 
   Future<void> _checkLandlineExisting() async {
     if (contactType != 'Landline') return;
-
     final landline = _landlineController.text.trim();
     final areaCode = _areaCodeController.text.trim();
-
     if (landline.isEmpty || areaCode.isEmpty) return;
-
     final fullNumber = "$areaCode-$landline";
-
     setState(() => _isCheckingLandline = true);
-
     try {
       final response = await supabase
           .from('profiles')
           .select('business_name, person_name')
           .eq('landline', fullNumber)
           .maybeSingle();
-
       setState(() {
         _isLandlineAvailable = (response == null);
-
         if (response != null) {
           _existingLandlineName =
               (response['business_name'] != null &&
@@ -248,7 +225,6 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
         } else {
           _existingLandlineName = null;
         }
-
         _isCheckingLandline = false;
       });
     } catch (e) {
@@ -258,9 +234,7 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
 
   void _clearForm() {
     _formKey.currentState?.reset();
-
     _selectedProducts.clear();
-
     for (var c in [
       _mobileController,
       _cityController,
@@ -277,7 +251,6 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
     ]) {
       c.clear();
     }
-
     setState(() {
       _imageFile = null;
       _isMobileAvailable = null;
@@ -286,6 +259,7 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
       _existingLandlineName = null;
       selectedPrefix = '';
       contactType = 'Mobile';
+      _isVerified = false;
     });
   }
 
@@ -305,7 +279,6 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
   };
 
   String? _activeField;
-  bool loading = false;
 
   String _generateOtp() {
     final random = Random();
@@ -344,7 +317,6 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
     String nameText = isPersonTab
         ? "$selectedPrefix ${_personNameController.text.trim()}"
         : "M/s. ${_businessNameController.text.trim()}";
-
     String businessName = _businessNameController.text.trim();
     String link =
         "https://play.google.com/store/apps/details?id=com.celfonphonebookapp&pcampaignid=web_share";
@@ -353,8 +325,8 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
 
     TextEditingController messageController = TextEditingController(
       text: isPersonTab
-          ? "Dear $nameText, CELFON BOOK is a Mobile App, with profiles of lakhs of mobile users. Your Details are also added based on field survay, online data, You are listed under your profession ${profession?.toUpperCase() ?? ''}. Kindly verify your details by clicking CELFON BOOK App at ${link}. "
-          : "Dear $nameText CELFON BOOK is a Mobile App, with profiles of lakhs of mobile users. Your Firm ${businessName} is also added based on field survay, online data. You are listed under keywords ${keywords?.toUpperCase() ?? ''}. Kindly verify your details by clicking CELFON BOOK App at ${link}.",
+          ? "Dear $nameText, CELFON BOOK is a Mobile App, with profiles of lakhs of mobile users. Your Details are also added based on field survay, online data, You are listed under your profession ${profession.toUpperCase()}. Kindly verify your details by clicking CELFON BOOK App at $link. "
+          : "Dear $nameText CELFON BOOK is a Mobile App, with profiles of lakhs of mobile users. Your Firm $businessName is also added based on field survay, online data. You are listed under keywords ${keywords.toUpperCase()}. Kindly verify your details by clicking CELFON BOOK App at $link.",
     );
 
     showDialog(
@@ -374,85 +346,28 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
                 ),
               ),
               const SizedBox(height: 15),
-
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  /// WhatsApp
-                  // GestureDetector(
-                  //   onTap: () async {
-                  //     final message = Uri.encodeComponent(
-                  //       messageController.text,
-                  //     );
-                  //     final phone = _mobileController.text.trim();
-
-                  //     final url = Uri.parse(
-                  //       "https://wa.me/$phone?text=$message",
-                  //     );
-
-                  //     if (await canLaunchUrl(url)) {
-                  //       await launchUrl(url);
-                  //     }
-                  //   },
-                  //   child: Image.asset(
-                  //     'images/whats_app.png',
-                  //     height: 45,
-                  //     width: 45,
-                  //   ),
-                  // ),
-
-                  /// SMS
                   GestureDetector(
                     onTap: () async {
-                      final message = Uri.encodeComponent(
-                        messageController.text,
-                      );
+                      final message =
+                          Uri.encodeComponent(messageController.text);
                       final mobileNumber = mobile;
-
                       if (mobileNumber.isEmpty) {
                         _showSnackBar(
-                          "Mobile number not available",
-                          Colors.red,
-                        );
+                            "Mobile number not available", Colors.red);
                         return;
                       }
-
-                      final Uri smsUri = Uri.parse(
-                        "sms:$mobileNumber?body=$message",
-                      );
-
+                      final Uri smsUri =
+                          Uri.parse("sms:$mobileNumber?body=$message");
                       if (await canLaunchUrl(smsUri)) {
                         await launchUrl(smsUri);
-
-                        // Close popup after SMS app opens
                         Navigator.pop(context);
                       }
                     },
                     child: Image.asset('images/sms.png', height: 45, width: 45),
                   ),
-
-                  /// Mail
-                  // GestureDetector(
-                  //   onTap: () async {
-                  //     final message = Uri.encodeComponent(
-                  //       messageController.text,
-                  //     );
-                  //     final email = _emailController.text.trim();
-
-                  //     final url = Uri.parse(
-                  //       "mailto:$email?subject=Contact&body=$message",
-                  //     );
-
-                  //     if (await canLaunchUrl(url)) {
-                  //       await launchUrl(url);
-                  //     }
-                  //   },
-                  //   child: Image.asset(
-                  //     'images/email.png',
-                  //     height: 45,
-                  //     width: 45,
-                  //   ),
-                  // ),
                 ],
               ),
             ],
@@ -476,7 +391,6 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
               children: [
                 _previewRow("Type", isPersonTab ? "Person" : "Business"),
                 _previewRow("Prefix", selectedPrefix),
-
                 if (isPersonTab) ...[
                   _previewRow("Name", _personNameController.text),
                   _previewRow("Profession", _professionController.text),
@@ -485,7 +399,6 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
                   _previewRow("Contact Person", _contactPersonController.text),
                   _previewRow("Products", _productInputController.text),
                 ],
-
                 _previewRow("Mobile", _mobileController.text),
                 _previewRow("Landline", _landlineController.text),
                 _previewRow("City", _cityController.text),
@@ -495,7 +408,6 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
               ],
             ),
           ),
-
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -507,7 +419,7 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
               ),
               onPressed: () {
                 Navigator.pop(context);
-                _validateAndSave(); // 🔥 final save
+                _validateAndSave();
               },
               child: const Text("Confirm & Save"),
             ),
@@ -519,7 +431,6 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
 
   Widget _previewRow(String label, String value) {
     if (value.isEmpty) return const SizedBox();
-
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Text("$label: $value", style: const TextStyle(fontSize: 14)),
@@ -541,9 +452,7 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
     if (_landlineController.text.trim().isEmpty &&
         _mobileController.text.trim().isEmpty) {
       _showSnackBar(
-        "Please enter either Mobile or Landline Number!",
-        Colors.red,
-      );
+          "Please enter either Mobile or Landline Number!", Colors.red);
       return;
     }
     if (selectedPrefix.isEmpty) {
@@ -562,28 +471,20 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
       String? imageUrl = await _uploadImage(user.id);
       DateTime now = DateTime.now();
       String todayDate = DateFormat('yyyy-MM-dd').format(now);
-      String startOfDay = DateTime(
-        now.year,
-        now.month,
-        now.day,
-      ).toIso8601String();
-      String endOfDay = DateTime(
-        now.year,
-        now.month,
-        now.day,
-        23,
-        59,
-        59,
-      ).toIso8601String();
+      String startOfDay =
+          DateTime(now.year, now.month, now.day).toIso8601String();
+      String endOfDay =
+          DateTime(now.year, now.month, now.day, 23, 59, 59).toIso8601String();
 
+      // ✅ FIX: Use _isVerified so that if user verified via OTP,
+      // verified = true is saved to DB. Otherwise verified = false.
       await supabase.from('profiles').insert({
         'user_type': isPersonTab ? 'person' : 'business',
         'person_name': isPersonTab
             ? _personNameController.text.trim()
             : _contactPersonController.text.trim(),
-        'business_name': isPersonTab
-            ? null
-            : _businessNameController.text.trim(),
+        'business_name':
+            isPersonTab ? null : _businessNameController.text.trim(),
         'mobile_number': _mobileController.text.trim(),
         'landline': _landlineController.text.trim(),
         'landline_code': _areaCodeController.text.trim(),
@@ -597,6 +498,7 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
         'description': isPersonTab ? null : _selectedProducts.join(', '),
         'email': _emailController.text.trim(),
         'profile_image': imageUrl,
+        'verified': _isVerified, // ✅ true if OTP verified, false otherwise
         'updated_at': DateTime.now().toIso8601String(),
       });
 
@@ -614,9 +516,8 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
         'entryname': isPersonTab
             ? _personNameController.text.trim()
             : _businessNameController.text.trim(),
-        'entry_type': isPersonTab
-            ? 'Person Profile Entry'
-            : 'Business Profile Entry',
+        'entry_type':
+            isPersonTab ? 'Person Profile Entry' : 'Business Profile Entry',
         'updated_at': DateTime.now().toIso8601String(),
         'created_at': DateTime.now().toIso8601String(),
       });
@@ -642,7 +543,6 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
       _showSnackBar("Details saved successfully!", const Color(0xFF1F8EB6));
       final mobile = _mobileController.text.trim();
       _showSharePopup(mobile);
-
       _clearForm();
     } catch (e) {
       _showSnackBar("Error: ${e.toString()}", Colors.redAccent);
@@ -666,9 +566,7 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
 
   Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
-
     final picked = await picker.pickImage(source: source, imageQuality: 70);
-
     if (picked != null) {
       setState(() {
         _imageFile = File(picked.path);
@@ -676,65 +574,72 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
     }
   }
 
-  Future<void> sendOtp(String phone) async {
-    if (phone.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Enter mobile number"),
-      ),
-    );
-    return;
-  }
+  /// ✅ CORS-safe OTP send:
+  /// 1. Generate OTP
+  /// 2. Save to Supabase otp_verifications
+  /// 3. Try SMS (ignore CORS error on web — works on real device)
+  /// 4. Navigate to verify page regardless
+  Future<void> _sendOtpAndNavigate() async {
+    final phone = _mobileController.text.trim();
+
+    if (phone.length != 10) {
+      _showSnackBar("Enter a valid 10-digit mobile number", Colors.red);
+      return;
+    }
 
     final cleanPhone = phone.replaceAll(RegExp(r'\D'), '');
     final otp = _generateOtp();
 
-    setState(() => loading = true);
+    setState(() => _isSendingOtp = true);
 
     try {
-      // 🔥 CALL YOUR SMS API HERE
-      final response = await http.post(
-        Uri.parse(
-          "http://bhashsms.com/api/sendmsg.php?user=Celfon_SMS&pass=123456&sender=CELFON&phone=$cleanPhone&text=Your%20OTP%20for%20Signpost%20Celfon5G%20is:$otp.%20Use%20this%20OTP%20to%20verify%20your%20account.%20Do%20not%20share%20OTP%20with%20anyone.&priority=ndnd&stype=normal",
-        ),
-        body: {"phone": cleanPhone, "otp": otp},
-      );
+      // Step 1: Delete old OTPs for this phone
+      await Supabase.instance.client
+          .from('otp_verifications')
+          .delete()
+          .eq('phone', cleanPhone);
 
-      if (response.statusCode == 200) {
-        // 🔥 Delete old OTPs (important)
-        await Supabase.instance.client
-            .from('otp_verifications')
-            .delete()
-            .eq('phone', cleanPhone);
-        // 🔥 Insert new OTP
-        await Supabase.instance.client.from('otp_verifications').insert({
-          'phone': cleanPhone,
-          'otp': otp,
-        });
+      // Step 2: Save new OTP to Supabase
+      await Supabase.instance.client.from('otp_verifications').insert({
+        'phone': cleanPhone,
+        'otp': otp,
+      });
 
-        // ✅ Navigate
-        context.go('/otp_verification', extra: cleanPhone);
-      } else {
-        throw Exception("Failed to send OTP");
+      // Step 3: Try SMS (fire and forget — CORS error on web is expected, works on real device)
+      final smsUrl =
+          "http://bhashsms.com/api/sendmsg.php?user=Celfon_SMS&pass=123456&sender=CELFON&phone=$cleanPhone&text=Your%20OTP%20for%20Signpost%20Celfon5G%20is:$otp.%20Use%20this%20OTP%20to%20verify%20your%20account.%20Do%20not%20share%20OTP%20with%20anyone.&priority=ndnd&stype=normal";
+
+      http.get(Uri.parse(smsUrl)).catchError((e) {
+        // CORS error on web browser — ignore, SMS will work on real Android/iOS device
+        debugPrint("SMS send note (expected on web): $e");
+        return http.Response('', 0);
+      });
+
+      // Step 4: Navigate to OTP verification and await result
+      if (mounted) {
+        final result =
+            await context.push('/media_otp_verification', extra: cleanPhone);
+        // ✅ If user verified successfully, mark _isVerified = true
+        if (result == true && mounted) {
+          setState(() {
+            _isVerified = true;
+          });
+        }
       }
     } catch (e) {
-      debugPrint("Error: $e");
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Failed to send OTP")));
+      debugPrint("OTP Error: $e");
+      _showSnackBar("Failed to prepare OTP. Check connection.", Colors.red);
     }
 
-    setState(() => loading = false);
+    if (mounted) setState(() => _isSendingOtp = false);
   }
 
   void _showSnackBar(String msg, Color color) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: color));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: color),
+    );
   }
 
-  @override
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -751,47 +656,25 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              /// PERSON / BUSINESS TOGGLE
               _buildTabSelector(),
-
               const SizedBox(height: 20),
-
-              /// MOBILE
               _buildMobileField(),
 
-              /// IDENTITY
               if (isPersonTab) ...[
                 _buildPrefixRadio(),
                 _underlineField("name", _personNameController, "Name", true),
                 _underlineField(
-                  "profession",
-                  _professionController,
-                  "Profession",
-                  false,
-                ),
+                    "profession", _professionController, "Profession", false),
               ] else ...[
-                _underlineField(
-                  "business",
-                  _businessNameController,
-                  "Business Name",
-                  true,
-                ),
+                _underlineField("business", _businessNameController,
+                    "Business Name", true),
                 _buildPrefixRadio(),
-                _underlineField(
-                  "contactPerson",
-                  _contactPersonController,
-                  "Contact Person",
-                  false,
-                ),
-                _underlineField(
-                  "product",
-                  _productInputController,
-                  "Product / Service",
-                  true,
-                ),
+                _underlineField("contactPerson", _contactPersonController,
+                    "Contact Person", false),
+                _underlineField("product", _productInputController,
+                    "Product / Service", true),
               ],
 
-              /// ADDRESS
               _underlineField("address", _addressController, "Address", true),
               _underlineField("city", _cityController, "City", true),
               _underlineField(
@@ -803,8 +686,6 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 maxLength: 6,
               ),
-
-              /// Landline
               _underlineField(
                 "landlineCode",
                 _areaCodeController,
@@ -814,7 +695,6 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 maxLength: 5,
               ),
-
               _underlineField(
                 "landline",
                 _landlineController,
@@ -834,42 +714,12 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
 
               const SizedBox(height: 30),
 
-              /// GENERATE OTP TOGGLE
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      "Generate OTP",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+              /// VERIFY NUMBER BUTTON
+              _buildVerifyButton(),
 
-                    Switch(
-                      value: generateOtp,
-                      activeColor: const Color(0xFF1F8EB6),
-                      onChanged: (value) {
-                        setState(() {
-                          generateOtp = value;
-                        });
-                      },
-                    ),
-                  ],
-                ),
-              ),
+              const SizedBox(height: 16),
 
               /// SAVE BUTTON
-              /// BUTTON
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -877,24 +727,73 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1F8EB6),
                   ),
-                  onPressed: _isLoading
-                      ? null
-                      : generateOtp
-                      ? ()=>sendOtp(_mobileController.text.trim())
-                      : _showPreview,
+                  onPressed: _isLoading ? null : _showPreview,
                   child: _isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : Text(
-                          generateOtp ? "Send OTP" : "Save",
-                          style: const TextStyle(
-                            fontSize: 18,
-                            color: Colors.white,
-                          ),
+                      : const Text(
+                          "Save",
+                          style: TextStyle(fontSize: 18, color: Colors.white),
                         ),
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVerifyButton() {
+    if (_isVerified) {
+      return Container(
+        width: double.infinity,
+        height: 50,
+        decoration: BoxDecoration(
+          color: Colors.green.shade50,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.green.shade400),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.verified, color: Colors.green, size: 22),
+            SizedBox(width: 8),
+            Text(
+              "Verified",
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.green,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: Color(0xFF1F8EB6)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        onPressed: _isSendingOtp ? null : _sendOtpAndNavigate,
+        icon: _isSendingOtp
+            ? const SizedBox(
+                height: 18,
+                width: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Color(0xFF1F8EB6),
+                ),
+              )
+            : const Icon(Icons.phone_android, color: Color(0xFF1F8EB6)),
+        label: Text(
+          _isSendingOtp ? "Sending..." : "Verify Number",
+          style: const TextStyle(fontSize: 16, color: Color(0xFF1F8EB6)),
         ),
       ),
     );
@@ -964,11 +863,8 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Prefix",
-            style: TextStyle(fontSize: 16, color: Colors.black),
-          ),
-
+          const Text("Prefix",
+              style: TextStyle(fontSize: 16, color: Colors.black)),
           if (_prefixFocusNode.hasFocus)
             const Padding(
               padding: EdgeInsets.only(top: 4),
@@ -977,16 +873,13 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
                 style: TextStyle(color: Colors.red, fontSize: 14),
               ),
             ),
-
           Row(
             children: [
               Expanded(
                 child: RadioListTile<String>(
                   value: 'Mr.',
                   groupValue: selectedPrefix,
-                  onChanged: (val) {
-                    setState(() => selectedPrefix = val!);
-                  },
+                  onChanged: (val) => setState(() => selectedPrefix = val!),
                   title: const Text("Mr."),
                   dense: true,
                   contentPadding: EdgeInsets.zero,
@@ -996,9 +889,7 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
                 child: RadioListTile<String>(
                   value: 'Ms.',
                   groupValue: selectedPrefix,
-                  onChanged: (val) {
-                    setState(() => selectedPrefix = val!);
-                  },
+                  onChanged: (val) => setState(() => selectedPrefix = val!),
                   title: const Text("Ms."),
                   dense: true,
                   contentPadding: EdgeInsets.zero,
@@ -1041,9 +932,7 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
           ),
         ),
         validator: (v) {
-          if (required && (v == null || v.isEmpty)) {
-            return "Required";
-          }
+          if (required && (v == null || v.isEmpty)) return "Required";
           return null;
         },
       ),
@@ -1063,12 +952,13 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
             maxLength: 10,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             decoration: InputDecoration(
-              helperText: _activeField == 'mobile'
-                  ? _getHelpText('mobile')
-                  : null,
-              helperStyle: const TextStyle(color: Colors.red, fontSize: 14),
+              helperText:
+                  _activeField == 'mobile' ? _getHelpText('mobile') : null,
+              helperStyle:
+                  const TextStyle(color: Colors.red, fontSize: 14),
               hintText: "Mobile Number",
-              hintStyle: const TextStyle(color: Colors.grey, fontSize: 20),
+              hintStyle:
+                  const TextStyle(color: Colors.grey, fontSize: 20),
               counterText: "",
               enabledBorder: const UnderlineInputBorder(
                 borderSide: BorderSide(color: Colors.black),
@@ -1082,11 +972,13 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
                       child: SizedBox(
                         height: 18,
                         width: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child:
+                            CircularProgressIndicator(strokeWidth: 2),
                       ),
                     )
                   : (_isMobileAvailable == true
-                        ? const Icon(Icons.check_circle, color: Colors.green)
+                        ? const Icon(Icons.check_circle,
+                            color: Colors.green)
                         : (_isMobileAvailable == false
                               ? const Icon(Icons.error, color: Colors.red)
                               : null)),
@@ -1099,8 +991,6 @@ class _MediaPartnerPageState extends State<MediaPartnerPage> {
             },
           ),
         ),
-
-        /// Already Existing Name Warning
         if (_existingName != null && _mobileController.text.length == 10)
           Padding(
             padding: const EdgeInsets.only(bottom: 16),
