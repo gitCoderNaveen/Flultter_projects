@@ -13,6 +13,7 @@ import 'package:celfonephonebookapp/features/favorites/view/favorite_page.dart';
 import 'package:celfonephonebookapp/features/menu/features/about_us.dart';
 import 'package:celfonephonebookapp/features/menu/features/contact_us.dart';
 import 'package:celfonephonebookapp/features/menu/features/opt_out.dart';
+import 'package:celfonephonebookapp/features/menu/ui/my_refferal_page.dart';
 import 'package:celfonephonebookapp/features/model/ui/business_model_page.dart';
 import 'package:celfonephonebookapp/features/model/ui/free_model.dart';
 import 'package:celfonephonebookapp/features/model/ui/model_page.dart';
@@ -89,11 +90,9 @@ class AppRouter {
 
       // 3️⃣ Guest user (not logged in)
       if (user == null) {
-        // allow guest browsing
-        if (isPublicRoute || isAuthRoute) return null;
-
-        // block protected routes
-        return '/login';
+        if (isAuthRoute || location == '/onboarding')
+          return null; // allow login/signup/onboarding
+        return '/login'; // everything else → login
       }
 
       // 4️⃣ Logged in but email not verified
@@ -151,6 +150,11 @@ class AppRouter {
                 AppRouter._slidePage(const DashboardPage()),
           ),
           GoRoute(
+            path: '/dashboard',
+            pageBuilder: (context, state) =>
+                AppRouter._slidePage(const DashboardPage()),
+          ),
+          GoRoute(
             path: '/search',
             pageBuilder: (context, state) =>
                 AppRouter._slidePage(const SearchPage()),
@@ -172,6 +176,11 @@ class AppRouter {
 
               return VerifySuccessPage(phone: phone);
             },
+          ),
+          GoRoute(
+            path: '/my_referral',
+            pageBuilder: (context, state) =>
+                AppRouter._slidePage(const MyReferralPage()),
           ),
           GoRoute(
             path: '/nearby-promotion',
@@ -256,20 +265,30 @@ class AppRouter {
             pageBuilder: (context, state) =>
                 AppRouter._slidePage(PrivacyOptOutPage()),
           ),
-          GoRoute(
-            path: '/otp_verification',
-            pageBuilder: (context, state) {
-              final phone = state.extra as String;
 
-              return AppRouter._slidePage(VerifyOtpPage(phone: phone));
-            },
-          ),
           GoRoute(
             path: '/media_otp_verification',
             pageBuilder: (context, state) {
               final phone = state.extra as String;
 
               return AppRouter._slidePage(MediaVerifyOtp(phone: phone));
+            },
+          ),
+
+          GoRoute(
+            path: '/media_verify_success',
+            builder: (context, state) {
+              final phone = state.extra as String;
+
+              return MediaVerifySuccess(phone: phone);
+            },
+          ),
+          GoRoute(
+            path: '/otp_verification',
+            pageBuilder: (context, state) {
+              final phone = state.extra as String;
+
+              return AppRouter._slidePage(VerifyOtpPage(phone: phone));
             },
           ),
           GoRoute(
@@ -280,16 +299,9 @@ class AppRouter {
               return VerifySuccessPage(phone: phone);
             },
           ),
-          GoRoute(
-            path: '/media_verify_success',
-            builder: (context, state) {
-              final phone = state.extra as String;
-
-              return MediaVerifySuccess(phone: phone);
-            },
-          ),
         ],
       ),
+
       GoRoute(
         path: '/lions_club',
         pageBuilder: (context, state) => AppRouter._slidePage(LionsDirectory()),

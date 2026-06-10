@@ -289,257 +289,265 @@ class _SearchPageState extends State<SearchPage> {
 
   /// SEARCH BARS UI
   Widget _buildSearchBars() {
-    if (_filter == SearchFilter.city) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          /// 🔹 BEFORE CITY SELECTED → show dropdown
-          if (_selectedCity == null) ...[
-            Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () {
-                    setState(() {
-                      _filter = SearchFilter.business;
-                    });
-                    _fetchDefault();
-                  },
-                ),
-
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    value: _selectedCity,
-                    hint: const Text("Select City"),
-                    items: _cities.map((city) {
-                      return DropdownMenuItem(value: city, child: Text(city));
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedCity = value;
-                      });
-                      _searchByCity(value!);
-                    },
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: Colors.grey.shade200,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-
-          /// 🔹 AFTER CITY SELECTED → compact row
-          if (_selectedCity != null) ...[
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                /// 🔹 ROW 1 → CITY TAG
+    // 🔥 Top UI-la eruntha 'Intec Archives' label-ah intha Column wrapper kulla erunthu completely remove panniyachu bro.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_filter == SearchFilter.city) ...[
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_selectedCity == null) ...[
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.location_on,
-                            size: 16,
-                            color: Colors.red,
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      onPressed: () {
+                        setState(() {
+                          _filter = SearchFilter.business;
+                        });
+                        _fetchDefault();
+                      },
+                    ),
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: _selectedCity,
+                        hint: const Text("Select City"),
+                        items: _cities.map((city) {
+                          return DropdownMenuItem(
+                            value: city,
+                            child: Text(city),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedCity = value;
+                          });
+                          _searchByCity(value!);
+                        },
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: Colors.grey.shade200,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            _selectedCity!,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _selectedCity = null;
-                              });
-                              _fetchDefault();
-                            },
-                            child: const Padding(
-                              padding: EdgeInsets.only(left: 6),
-                              child: Icon(Icons.close, size: 14),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 10),
-
-                /// 🔹 ROW 2 → SEARCH FIELDS
-                Row(
+              ],
+              if (_selectedCity != null) ...[
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    /// BUSINESS SEARCH
-                    Expanded(
-                      flex: _citySearchType == SearchFilter.business ? 8 : 2,
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.location_on,
+                                size: 16,
+                                color: Colors.red,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                _selectedCity!,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _selectedCity = null;
+                                  });
+                                  _fetchDefault();
+                                },
+                                child: const Padding(
+                                  padding: EdgeInsets.only(left: 6),
+                                  child: Icon(Icons.close, size: 14),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: _citySearchType == SearchFilter.business
+                              ? 8
+                              : 2,
+                          child: TextField(
+                            controller: _businessController,
+                            onTap: () {
+                              setState(() {
+                                _citySearchType = SearchFilter.business;
+                                _productController.clear();
+                              });
+                            },
+                            onChanged: _search,
+                            decoration: InputDecoration(
+                              hintText: "Business",
+                              filled: true,
+                              fillColor: Colors.grey.shade200,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(width: 8),
+
+                        Expanded(
+                          flex: _citySearchType == SearchFilter.products
+                              ? 8
+                              : 2,
+                          child: TextField(
+                            controller: _productController,
+                            onTap: () {
+                              setState(() {
+                                _citySearchType = SearchFilter.products;
+                                _businessController.clear();
+                              });
+                            },
+                            onChanged: _search,
+                            decoration: InputDecoration(
+                              hintText: "Product search",
+                              filled: true,
+                              fillColor: Colors.grey.shade200,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ] else ...[
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _filter = SearchFilter.city;
+                    _businessController.clear();
+                    _productController.clear();
+                    _selectedCity = null;
+                  });
+
+                  _fetchCities();
+                },
+                child: Row(
+                  children: const [
+                    Icon(Icons.location_on, color: Colors.red),
+                    SizedBox(width: 6),
+                    Text(
+                      "Search city",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              Row(
+                children: [
+                  Expanded(
+                    flex: _filter == SearchFilter.business ? 8 : 2,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      height: 45,
                       child: TextField(
                         controller: _businessController,
                         onTap: () {
                           setState(() {
-                            _citySearchType = SearchFilter.business;
+                            _filter = SearchFilter.business;
                             _productController.clear();
                           });
                         },
-                        onChanged: _search,
+                        onChanged: (value) {
+                          _search(value);
+                        },
                         decoration: InputDecoration(
-                          hintText: "Business",
+                          hintText: "Business search",
                           filled: true,
                           fillColor: Colors.grey.shade200,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(30),
                           ),
                         ),
                       ),
                     ),
+                  ),
 
-                    const SizedBox(width: 8),
+                  const SizedBox(width: 8),
 
-                    /// PRODUCT SEARCH
-                    Expanded(
-                      flex: _citySearchType == SearchFilter.products ? 8 : 2,
+                  Expanded(
+                    flex: _filter == SearchFilter.business ? 2 : 8,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      height: 45,
                       child: TextField(
                         controller: _productController,
                         onTap: () {
                           setState(() {
-                            _citySearchType = SearchFilter.products;
+                            _filter = SearchFilter.products;
                             _businessController.clear();
                           });
                         },
-                        onChanged: _search,
+                        onChanged: (value) {
+                          _search(value);
+                        },
                         decoration: InputDecoration(
                           hintText: "Product search",
                           filled: true,
                           fillColor: Colors.grey.shade200,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(30),
                           ),
                         ),
                       ),
                     ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ],
-      );
-    }
-
-    final isBusiness = _filter == SearchFilter.business;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        /// 🔥 NEW: SEARCH CITY BUTTON (TOP)
-        GestureDetector(
-          onTap: () {
-            setState(() {
-              _filter = SearchFilter.city;
-              _businessController.clear();
-              _productController.clear();
-              _selectedCity = null;
-            });
-
-            _fetchCities(); // load cities
-          },
-          child: Row(
-            children: const [
-              Icon(Icons.location_on, color: Colors.red),
-              SizedBox(width: 6),
-              Text(
-                "Search city",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ],
               ),
             ],
           ),
-        ),
-
-        const SizedBox(height: 10),
-
-        /// 🔻 EXISTING SEARCH BARS (UNCHANGED)
-        Row(
-          children: [
-            Expanded(
-              flex: isBusiness ? 8 : 2,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                height: 45,
-                child: TextField(
-                  controller: _businessController,
-                  onTap: () {
-                    setState(() {
-                      _filter = SearchFilter.business;
-                      _productController.clear();
-                    });
-                  },
-                  onChanged: (value) {
-                    _search(value);
-                  },
-                  decoration: InputDecoration(
-                    hintText: "Business search",
-                    filled: true,
-                    fillColor: Colors.grey.shade200,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(width: 8),
-
-            Expanded(
-              flex: isBusiness ? 2 : 8,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                height: 45,
-                child: TextField(
-                  controller: _productController,
-                  onTap: () {
-                    setState(() {
-                      _filter = SearchFilter.products;
-                      _businessController.clear();
-                    });
-                  },
-                  onChanged: (value) {
-                    _search(value);
-                  },
-                  decoration: InputDecoration(
-                    hintText: "Product search",
-                    filled: true,
-                    fillColor: Colors.grey.shade200,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+        ],
       ],
     );
   }
@@ -553,6 +561,50 @@ class _SearchPageState extends State<SearchPage> {
         children: [
           Padding(padding: const EdgeInsets.all(16), child: _buildSearchBars()),
 
+          // 🔥 FIXED HEADING POSITION AREA:
+          // Intec 2026 eppadi unga search field-ku kela alignment correct-ah irukko, athe logic-la intha render section padhuthu.
+          if (!_loading && _results.isNotEmpty) ...[
+            // 1. Condition for Expo ID 1 -> "Intec Archives"
+            if (_currentExpoId.toString() == '1')
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 8.0,
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Intec Archives',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                ),
+              ),
+
+            // 2. Condition for Expo ID 2 -> "Intec 2026"
+            if (_currentExpoId.toString() == '2')
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 8.0,
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Intec 2026',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
@@ -560,7 +612,6 @@ class _SearchPageState extends State<SearchPage> {
                 ? const Center(child: Text("No results"))
                 : ListView.builder(
                     itemCount: _results.length,
-
                     itemBuilder: (_, i) {
                       return SearchResultCard(
                         item: _results[i],

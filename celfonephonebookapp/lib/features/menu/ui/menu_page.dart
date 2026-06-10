@@ -46,6 +46,11 @@ class MenuPage extends StatelessWidget {
 
           // Analytics
           ListTile(
+            leading: const Icon(Icons.people_alt_sharp),
+            title: const Text('My Referral'),
+            onTap: () => context.push('/my_referral'),
+          ),
+          ListTile(
             leading: const Icon(Icons.notes_rounded),
             title: const Text('About us'),
             onTap: () => context.push('/about_us'),

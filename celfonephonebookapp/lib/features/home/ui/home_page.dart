@@ -41,10 +41,10 @@ class _HomeView extends StatelessWidget {
           SliverToBoxAdapter(child: _Carousel(c)),
           SliverToBoxAdapter(child: _IndexFinder()),
           SliverToBoxAdapter(
-            child: HomeCategoriesSection(title: 'Popular Categories B2C'),
+            child: HomeCategoriesSection(title: 'POPULAR CATEGORIES B2C'),
           ),
           SliverToBoxAdapter(
-            child: HomeCategoriesSection(title: 'Popular Categories B2B'),
+            child: HomeCategoriesSection(title: 'POPULAR CATEGORIES B2B'),
           ),
           SliverToBoxAdapter(child: OnlineDirectorySection()),
           SliverToBoxAdapter(child: ExpoDiarySection()),
@@ -526,9 +526,30 @@ class _IndexFinder extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Index Finder',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 22,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(4),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF667EEA), Color(0xFFFC5C7D)],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'ALPHABETICAL',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color.fromARGB(255, 2, 2, 248),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           SizedBox(
@@ -599,9 +620,32 @@ class _PopularFirms extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Popular Firms',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                const Row(
+                  children: [
+                    SizedBox(
+                      width: 4,
+                      height: 22,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.all(Radius.circular(4)),
+                          gradient: LinearGradient(
+                            colors: [Color(0xFF667EEA), Color(0xFFFC5C7D)],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      'POPULAR FIRMS',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                  color: Color.fromARGB(255, 2, 2, 248),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
 
@@ -834,9 +878,30 @@ class _PlayBooksSectionState extends State<PlayBooksSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "PlayBooks",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 22,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(4),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF667EEA), Color(0xFFFC5C7D)],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                "DIGITAL EDITIONS in PLAY BOOKS",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color.fromARGB(255, 2, 2, 248),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
 
@@ -998,13 +1063,30 @@ class _OnlineDirectorySectionState extends State<OnlineDirectorySection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Online Directory",
-            style: TextStyle(
-              fontSize: 22, // Clean UI kaga size light-ah adjust panni iruken
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1E293B),
-            ),
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 22,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(4),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF667EEA), Color(0xFFFC5C7D)],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                "CITYWISE DIRECTORY",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color.fromARGB(255, 2, 2, 248),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
 

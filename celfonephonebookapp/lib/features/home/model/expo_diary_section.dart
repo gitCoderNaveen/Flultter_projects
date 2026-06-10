@@ -46,13 +46,30 @@ class _ExpoDiarySectionState extends State<ExpoDiarySection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Expo Diary",
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1E293B),
-            ),
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 22,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(4),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF667EEA), Color(0xFFFC5C7D)],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                "TRADE FAIRS & EXPOS",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color.fromARGB(255, 2, 2, 248),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
 
