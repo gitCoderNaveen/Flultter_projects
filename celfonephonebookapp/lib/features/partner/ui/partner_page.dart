@@ -44,10 +44,10 @@ class _PartnerPageState extends State<PartnerPage> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgGrey,
-      appBar: AppBar(title: const _HeaderRow(collapsed: true)),
+      backgroundColor: const Color(0xffF6F8FC),
 
       body: FutureBuilder<PartnerModel?>(
         future: profileFuture,
@@ -56,112 +56,308 @@ class _PartnerPageState extends State<PartnerPage> {
           final profile = snapshot.data;
 
           final displayName = controller.getDisplayName(profile);
+
           final status = controller.getStatus(profile);
 
-          return CustomScrollView(
-            slivers: [
-              // SliverAppBar(
-              //   expandedHeight: 200,
-              //   backgroundColor: darkSlate,
-              //   pinned: true,
+          return Stack(
+            children: [
+              ///========================
+              /// TOP HEADER
+              ///========================
+              Container(
+                height: 250,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xff0B67F6), Color(0xff16C6F8)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+              ),
 
-              //   flexibleSpace: FlexibleSpaceBar(
-              //     background: Container(
-              //       padding: const EdgeInsets.all(20),
+              /// Decorative Circle
+              Positioned(
+                right: -40,
+                top: 25,
+                child: Container(
+                  width: 180,
+                  height: 180,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(.05),
+                  ),
+                ),
+              ),
 
-              //       decoration: const BoxDecoration(
-              //         gradient: LinearGradient(
-              //           colors: [darkSlate, primaryDark],
-              //         ),
-              //       ),
+              Positioned(
+                right: 40,
+                top: 60,
+                child: Container(
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(.05),
+                  ),
+                ),
+              ),
 
-              //       child: Column(
-              //         mainAxisAlignment: MainAxisAlignment.end,
-              //         crossAxisAlignment: CrossAxisAlignment.start,
+              SafeArea(
+                child: Column(
+                  children: [
+                    const SizedBox(height: 15),
 
-              //         children: [
-              //           const CircleAvatar(
-              //             radius: 28,
-              //             backgroundColor: Colors.white24,
-              //             child: Icon(Icons.person, color: Colors.white),
-              //           ),
+                    ///=====================
+                    /// LOGO
+                    ///=====================
+                    Center(
+                      child: Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 28,
+                              vertical: 12,
+                            ),
 
-              //           const SizedBox(height: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(18),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(.08),
+                                  blurRadius: 15,
+                                ),
+                              ],
+                            ),
 
-              //           Text(
-              //             "Hello,",
-              //             style: GoogleFonts.plusJakartaSans(
-              //               color: Colors.white70,
-              //             ),
-              //           ),
+                            child: RichText(
+                              text: const TextSpan(
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                children: [
+                                  TextSpan(
+                                    text: "Cel",
+                                    style: TextStyle(color: Colors.red),
+                                  ),
 
-              //           Text(
-              //             displayName,
-              //             style: GoogleFonts.plusJakartaSans(
-              //               color: Colors.white,
-              //               fontSize: 26,
-              //               fontWeight: FontWeight.bold,
-              //             ),
-              //           ),
+                                  TextSpan(
+                                    text: "fon",
+                                    style: TextStyle(color: Colors.blue),
+                                  ),
 
-              //           const SizedBox(height: 10),
+                                  TextSpan(
+                                    text: " Book",
+                                    style: TextStyle(color: Colors.black),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
 
-              //           buildStatus(status),
-              //         ],
-              //       ),
-              //     ),
-              //   ),
-              // ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
+                          const SizedBox(height: 10),
 
-                  child: Column(
-                    children: [
-                      buildTile(
-                        title: "Media Partner Form",
-                        subtitle: "Submit entries",
-                        icon: Icons.edit,
-                        color: primaryIndigo,
-                        onTap: () {
-                          context.push('/media-partner');
-                        },
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Divider(
+                                  indent: 40,
+                                  endIndent: 20,
+                                  color: Colors.white30,
+                                ),
+                              ),
+
+                              const Text(
+                                "Connects For Growth",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontStyle: FontStyle.italic,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+
+                              Expanded(
+                                child: Divider(
+                                  indent: 20,
+                                  endIndent: 40,
+                                  color: Colors.white30,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
+                    ),
 
-                      const SizedBox(height: 20),
+                    const SizedBox(height: 18),
 
-                      /// 🔹 HOW TO USE (NEW)
-                      GestureDetector(
-                        onTap: () {
-                          context.push('/media-partner-guide'); // 👈 route
-                        },
-                        child: const Text(
-                          "How to Fill Media partner!*",
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.red,
-                            fontWeight: FontWeight.w600,
-                            decoration: TextDecoration.underline,
+                    Expanded(
+                      child: Container(
+                        width: double.infinity,
+
+                        decoration: const BoxDecoration(
+                          color: Color(0xffF8FAFD),
+
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(35),
+                            topRight: Radius.circular(35),
                           ),
                         ),
-                      ),
 
-                      buildTile(
-                        title: "Revenue Tracker",
-                        subtitle: "View earnings",
-                        icon: Icons.wallet,
-                        color: successEmerald,
-                        onTap: () {
-                          context.push('/earning_page');
-                        },
+                        child: ListView(
+                          padding: const EdgeInsets.all(20),
+
+                          children: [
+                            buildPartnerCard(
+                              title: "Media Partner Form",
+                              subtitle: "Submit entries",
+                              icon: Icons.edit,
+                              iconColor: Colors.deepPurple,
+                              onTap: () {
+                                context.push('/media-partner');
+                              },
+                            ),
+
+                            buildPartnerCard(
+                              title: "How to Fill Media Partner",
+                              subtitle:
+                                  "Step-by-step guide to complete your media partner form",
+                              icon: Icons.menu_book_rounded,
+                              iconColor: Colors.orange,
+                              onTap: () {
+                                context.push('/media-partner-guide');
+                              },
+                            ),
+
+                            buildPartnerCard(
+                              title: "Revenue Tracker",
+                              subtitle: "View earnings",
+                              icon: Icons.account_balance_wallet,
+                              iconColor: Colors.green,
+                              badge: "₹12,450",
+                              onTap: () {
+                                context.push('/earning_page');
+                              },
+                            ),
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ],
           );
         },
+      ),
+    );
+  }
+
+  Widget buildPartnerCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color iconColor,
+    required VoidCallback onTap,
+    String? badge,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(26),
+          onTap: onTap,
+          child: Ink(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(26),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(.06),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                /// ICON
+                Container(
+                  height: 50,
+                  width: 50,
+                  decoration: BoxDecoration(
+                    color: iconColor.withOpacity(.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Icon(icon, color: iconColor, size: 20),
+                ),
+
+                const SizedBox(width: 18),
+
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xff1F2937),
+                        ),
+                      ),
+
+                      const SizedBox(height: 6),
+
+                      Text(
+                        subtitle,
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                if (badge != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    margin: const EdgeInsets.only(right: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      badge,
+                      style: GoogleFonts.poppins(
+                        color: Colors.green.shade700,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ),
+
+                Container(
+                  height: 48,
+                  width: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.chevron_right_rounded, size: 30),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

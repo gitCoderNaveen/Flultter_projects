@@ -1,135 +1,220 @@
 import 'dart:io';
-import 'package:celfonephonebookapp/Supabase/Supabase.dart';
-import 'package:celfonephonebookapp/features/profile/model/user_profile_model.dart';
+
+import 'package:flutter/cupertino.dart';
+import 'package:path/path.dart' as path;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../model/profile_model.dart';
+
 class ProfileService {
-  final SupabaseClient _client = SupbaseService.client;
+  final SupabaseClient _supabase = Supabase.instance.client;
 
-  Future<UserProfile?> getCurrentUser() async {
-    final user = _client.auth.currentUser;
-    if (user == null) return null;
-
+  /// Get Logged-in User Profile
+  Future<ProfileModel?> getCurrentUser() async {
     try {
-      final dataById = await _client
+      final user = _supabase.auth.currentUser;
+
+      if (user == null) return null;
+
+      final phone = user.phone;
+
+      if (phone == null || phone.isEmpty) {
+        return null;
+      }
+
+      // Remove +91 if your database stores only 10 digits
+      final mobileNumber = phone.startsWith('+91') ? phone.substring(3) : phone;
+
+      // Check whether profile exists
+      final response = await _supabase
           .from('profiles')
           .select()
-          .eq('id', user.id)
+          .eq('mobile_number', mobileNumber)
           .maybeSingle();
 
-      if (dataById != null) {
-        return UserProfile.fromSupabase(dataById);
+      if (response != null) {
+        return ProfileModel.fromMap(response);
       }
 
-      final phone = user.phone ?? '';
-      if (phone.isNotEmpty) {
-        final dataByPhone = await _client
-            .from('profiles')
-            .select()
-            .eq('mobile_number', phone)
-            .maybeSingle();
+      // Create new profile
+      final Map<String, dynamic> newProfile = {
+        'id': user.id,
+        'mobile_number': mobileNumber,
+        'person_name': '',
+        'business_name': '',
+        'city': '',
+        'email': user.email ?? '',
+        'person_prefix': '',
+        'keywords': '',
+        'pincode': '',
+        'landline_code': '',
+        'landline_number': '',
+        'whats_app': mobileNumber,
+        'address': '',
+        'profile_image': '',
+        'description': '',
+        'promo_code': '',
+        'web_site': '',
+        'product_images': [],
+        'user_type': 'person',
+        'is_business': false,
+      };
 
-        if (dataByPhone != null) {
-          await _client
-              .from('profiles')
-              .update({'id': user.id})
-              .eq('mobile_number', phone);
-
-          final updated = Map<String, dynamic>.from(dataByPhone);
-          updated['id'] = user.id;
-          return UserProfile.fromSupabase(updated);
-        }
-      }
-
-      return UserProfile(id: user.id, mobileNumber: user.phone);
-    } catch (e) {
-      print("Fetch Error: $e");
-      return UserProfile(id: user.id, mobileNumber: user.phone);
-    }
-  }
-
-  Future<void> updateProfileData(Map<String, dynamic> data) async {
-    final user = _client.auth.currentUser;
-    if (user == null) return;
-
-    data['updated_at'] = DateTime.now().toIso8601String();
-    data['id'] = user.id;
-
-    final existingById = await _client
-        .from('profiles')
-        .select('id')
-        .eq('id', user.id)
-        .maybeSingle();
-
-    if (existingById != null) {
-      await _client.from('profiles').update(data).eq('id', user.id);
-      return;
-    }
-
-    final phone = data['mobile_number']?.toString() ?? user.phone ?? '';
-    if (phone.isNotEmpty) {
-      final existingByPhone = await _client
+      final inserted = await _supabase
           .from('profiles')
-          .select('id')
-          .eq('mobile_number', phone)
-          .maybeSingle();
+          .insert(newProfile)
+          .select()
+          .single();
 
-      if (existingByPhone != null) {
-        await _client.from('profiles').update(data).eq('mobile_number', phone);
-        return;
-      }
+      return ProfileModel.fromMap(inserted);
+    } catch (e, stack) {
+      debugPrint("Profile Load Error: $e");
+      debugPrintStack(stackTrace: stack);
+      throw Exception("Failed to load profile: $e");
     }
-
-    await _client.from('profiles').insert(data);
   }
 
+  /// Update Profile
+  Future<void> updateProfile(ProfileModel profile) async {
+    try {
+      await _supabase
+          .from('profiles')
+          .update(profile.toMap())
+          .eq('mobile_number', profile.mobileNumber);
+    } catch (e) {
+      throw Exception('Failed to update profile: $e');
+    }
+  }
+
+  /// Upload Profile Image
   Future<String?> uploadProfileImage(File imageFile) async {
-    final user = _client.auth.currentUser;
-    if (user == null) return null;
-
     try {
-      final ext = imageFile.path.split('.').last;
-      final fileName =
-          '${user.id}_${DateTime.now().millisecondsSinceEpoch}.$ext';
+      final user = _supabase.auth.currentUser;
 
-      await _client.storage
-          .from('avatars')
+      if (user == null) return null;
+
+      final fileName =
+          "${DateTime.now().millisecondsSinceEpoch}${path.extension(imageFile.path)}";
+
+      final storagePath = "profiles/${user.id}/$fileName";
+
+      await _supabase.storage
+          .from('profile-images')
           .upload(
-            fileName,
+            storagePath,
             imageFile,
             fileOptions: const FileOptions(upsert: true),
           );
-      return _client.storage.from('avatars').getPublicUrl(fileName);
+
+      final imageUrl = _supabase.storage
+          .from('profile-images')
+          .getPublicUrl(storagePath);
+
+      return imageUrl;
     } catch (e) {
-      print("Profile Image Upload Error: $e");
-      return null;
+      throw Exception("Profile image upload failed: $e");
     }
   }
 
-  Future<String?> uploadProductImage(File imageFile) async {
-    final user = _client.auth.currentUser;
-    if (user == null) return null;
-
+  /// Upload Product Images
+  Future<List<String>> uploadProductImages(List<File> imageFiles) async {
     try {
-      final ext = imageFile.path.split('.').last;
-      final fileName =
-          'prod_${user.id}_${DateTime.now().millisecondsSinceEpoch}.$ext';
+      final user = _supabase.auth.currentUser;
 
-      await _client.storage
-          .from('avatars')
-          .upload(
-            fileName,
-            imageFile,
-            fileOptions: const FileOptions(upsert: true),
-          );
-      return _client.storage.from('avatars').getPublicUrl(fileName);
+      if (user == null) return [];
+
+      List<String> urls = [];
+
+      for (final image in imageFiles) {
+        final fileName =
+            "${DateTime.now().millisecondsSinceEpoch}_${path.basename(image.path)}";
+
+        final storagePath = "products/${user.id}/$fileName";
+
+        await _supabase.storage
+            .from('product-images')
+            .upload(
+              storagePath,
+              image,
+              fileOptions: const FileOptions(upsert: true),
+            );
+
+        urls.add(
+          _supabase.storage.from('product-images').getPublicUrl(storagePath),
+        );
+      }
+
+      return urls;
     } catch (e) {
-      print("Product Image Upload Error: $e");
-      return null;
+      throw Exception("Product image upload failed: $e");
     }
   }
 
-  Future<void> signOut() async {
-    await _client.auth.signOut();
+  /// Get Total Views
+  Future<int> getViewsCount(String shopId) async {
+    try {
+      final response = await _supabase
+          .from('views')
+          .select('views')
+          .eq('shop_id', shopId);
+
+      int total = 0;
+
+      for (final item in response) {
+        total += ((item['views'] ?? 1) as num).toInt();
+      }
+
+      return total;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  /// Get Total Leads
+  Future<int> getLeadsCount(String shopId) async {
+    try {
+      final response = await _supabase
+          .from('leads')
+          .select()
+          .eq('shop_id', shopId);
+
+      return response.length;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  /// Get Recent Leads
+  Future<List<Map<String, dynamic>>> getRecentLeads(String shopId) async {
+    try {
+      final response = await _supabase
+          .from('leads')
+          .select()
+          .eq('shop_id', shopId)
+          .order('created_at', ascending: false)
+          .limit(5);
+
+      return List<Map<String, dynamic>>.from(response);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Delete Profile Image
+  Future<void> deleteProfileImage(String storagePath) async {
+    try {
+      await _supabase.storage.from('profile-images').remove([storagePath]);
+    } catch (e) {
+      throw Exception(e.toString());
+    }
+  }
+
+  /// Delete Product Image
+  Future<void> deleteProductImage(String storagePath) async {
+    try {
+      await _supabase.storage.from('product-images').remove([storagePath]);
+    } catch (e) {
+      throw Exception(e.toString());
+    }
   }
 }

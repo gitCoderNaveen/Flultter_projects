@@ -37,6 +37,7 @@ class SearchResultCard extends StatelessWidget {
     final String stallNo = item['stall_no'] ?? "";
     final ViewService _viewService = ViewService();
     final LeadService _leadService = LeadService();
+    final bool isCouncilMember = item['tn_gov'] == true;
 
     String name;
 
@@ -85,12 +86,17 @@ class SearchResultCard extends StatelessWidget {
       borderColor = Colors.green;
     } else if (normal) {
       borderColor = Colors.blue;
+    } else if (isCouncilMember) {
+      return CouncilMemberCard(
+        item: item,
+        filter: filter,
+        searchQuery: searchQuery,
+      );
     }
 
     return GestureDetector(
-      onTap: () async{
+      onTap: () async {
         await _viewService.saveView(item);
-        
 
         final id = item['id'].toString();
         final isPrime = item['is_prime'] == true;
@@ -469,5 +475,324 @@ class SearchResultCard extends StatelessWidget {
       return keywords.first.toString();
     }
     return '';
+  }
+}
+
+class CouncilMemberCard extends StatelessWidget {
+  final Map item;
+  final SearchFilter filter;
+  final String searchQuery;
+
+  const CouncilMemberCard({
+    super.key,
+    required this.item,
+    required this.filter,
+    required this.searchQuery,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final String name = item['person_name'] ?? item['business_name'] ?? "";
+
+    final String mobileNumber = item['mobile_number'] ?? "";
+
+    final String city = item['city'] ?? "";
+    final String landline = item['landline'] ?? "";
+    final String landlineCode = item['landline_code'] ?? "";
+
+    final String image = item['profile_image'] ?? "";
+    String mobileRaw;
+    String mobile;
+    String _formatMobile(String mobile) {
+      if (mobile.length != 10) return mobile;
+      return "${mobile.substring(0, 5)} XXXXX";
+    }
+
+    String _formatLandline(String landline) {
+      if (landline.length < 5) return landline;
+      return landline.substring(0, 2) + " XXXXX";
+    }
+
+    if (mobileNumber.isNotEmpty) {
+      mobileRaw = mobileNumber;
+      mobile = _formatMobile(mobileNumber);
+    } else if (landline.isNotEmpty) {
+      mobileRaw = "$landlineCode$landline";
+      mobile = _formatLandline(mobileRaw);
+    } else {
+      mobileRaw = "";
+      mobile = "";
+    }
+
+    void _checkLogin(BuildContext context, VoidCallback onLoggedIn) {
+      if (AuthService.isLoggedIn) {
+        onLoggedIn();
+      } else {
+        context.push('/login');
+      }
+    }
+
+    Widget _iconButton({
+      IconData? icon,
+      String? imagePath,
+      required Color color,
+      required VoidCallback onTap,
+    }) {
+      return InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: imagePath != null
+              ? Image.asset(imagePath, width: 24, height: 24)
+              : Icon(icon, color: color, size: 24),
+        ),
+      );
+    }
+
+    void _showEnquiryDialog(BuildContext context) {
+      const String defaultMessage =
+          "I Saw Your Listing in CELFON BOOK. "
+          "I am Interested in your Products. Please Send Details/Call Me. "
+          "(Sent Through Signpost CELFON BOOK)";
+      final TextEditingController controller = TextEditingController(
+        text: defaultMessage,
+      );
+      final String mobile = item['mobile_number'] ?? "";
+      final String email = item['email'] ?? "";
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text("Send Enquiry"),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                /// TEXTBOX WITH DEFAULT MESSAGE
+                TextField(
+                  controller: controller,
+                  maxLines: 4,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                /// ICON BUTTONS ROW
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    /// WHATSAPP
+                    _iconButton(
+                      imagePath: "images/whats_app.png",
+                      color: Colors.green,
+                      onTap: () {
+                        final msg = controller.text;
+                        final url =
+                            "https://wa.me/+91$mobile?text=${Uri.encodeComponent(msg)}";
+                        launchUrl(Uri.parse(url));
+                      },
+                    ),
+
+                    /// MAIL (only if exists)
+                    if (email.isNotEmpty)
+                      _iconButton(
+                        icon: Icons.email,
+                        color: Colors.blue,
+                        onTap: () {
+                          final msg = controller.text;
+                          launchUrl(
+                            Uri.parse(
+                              "mailto:$email?subject=Enquiry&body=${Uri.encodeComponent(msg)}",
+                            ),
+                          );
+                        },
+                      ),
+
+                    /// CALL
+                    _iconButton(
+                      icon: Icons.call,
+                      color: Colors.green,
+                      onTap: () {
+                        launchUrl(Uri.parse("tel:$mobile"));
+                      },
+                    ),
+
+                    /// SMS
+                    _iconButton(
+                      icon: Icons.sms,
+                      color: Colors.orange,
+                      onTap: () {
+                        final msg = controller.text;
+                        launchUrl(
+                          Uri.parse(
+                            "sms:$mobile?body=${Uri.encodeComponent(msg)}",
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Close"),
+              ),
+            ],
+          );
+        },
+      );
+    }
+
+    /// CALL
+    void _makeCall(String mobile) {
+      launchUrl(Uri.parse("tel:$mobile"));
+    }
+
+    return GestureDetector(
+      onTap: () {
+        context.push('/model_page', extra: item['id'].toString());
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: const Color(0xffF6BE00), width: 4),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            /// PROFILE IMAGE
+            ClipOval(
+              child: image.isNotEmpty
+                  ? Image.network(
+                      image,
+                      width: 50,
+                      height: 50,
+                      fit: BoxFit.cover,
+                    )
+                  : Image.asset(
+                      "images/Tamil_Nadu_Emblem.png",
+                      width: 70,
+                      height: 70,
+                    ),
+            ),
+
+            const SizedBox(width: 15),
+
+            /// DETAILS
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  const SizedBox(height: 4),
+
+                  Text(mobile, style: const TextStyle(fontSize: 16)),
+
+                  const SizedBox(height: 4),
+
+                  Text(
+                    city,
+                    style: const TextStyle(
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(width: 8),
+
+            /// ACTIONS
+            Column(
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.call, color: Colors.red, size: 20),
+                      onPressed: () {
+                        _checkLogin(context, () {
+                          _makeCall(mobileRaw);
+                        });
+                      },
+                    ),
+
+                    IconButton(
+                      icon: const Icon(
+                        Icons.favorite,
+                        color: Colors.red,
+                        size: 20,
+                      ),
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (_) => FavoriteDialog(
+                            onSelected: (groupName) async {
+                              await FavoriteController().addToFavorite(
+                                groupName: groupName,
+                                businessName: item['business_name'],
+                                personName: item['person_name'],
+                                mobileNumber: item['mobile_number'],
+                              );
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("Added to favorites"),
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 4),
+
+                SizedBox(
+                  width: 90,
+                  height: 26,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      _checkLogin(context, () {
+                        _showEnquiryDialog(context);
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      "Enquiry",
+                      style: TextStyle(fontSize: 11),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

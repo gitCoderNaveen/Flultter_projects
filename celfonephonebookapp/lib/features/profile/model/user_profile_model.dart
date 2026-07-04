@@ -53,7 +53,7 @@ class UserProfile {
       personName: data['person_name'],
       mobileNumber: data['mobile_number'],
       personPrefix: data['person_prefix'],
-      profession: data['keywords'],
+      profession: (data['keywords'] ?? '').toString(),
       city: data['city'],
       pincode: data['pincode'],
       email: data['email'],
@@ -62,7 +62,7 @@ class UserProfile {
       whatsApp: data['whats_app'],
       address: data['address'],
       businessAddress: data['bussiness_address'], // DB spelling
-      profileImage: data['profile_image'],
+      // profileImage: data['profile_image'],
       businessName: data['business_name'],
       description: data['description'],
       promoCode: data['promo_code'],
@@ -70,7 +70,7 @@ class UserProfile {
       productImages: data['product_images'],
       userType: data['user_type'],
       isBusiness: data['is_business'] as bool?,
-      keywords: data['keywords'],
+      keywords: (data['keywords'] ?? '').toString(),
     );
   }
 }

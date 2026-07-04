@@ -161,9 +161,27 @@ class _LoginPageState extends State<LoginPage> {
                           MaterialPageRoute(builder: (_) => const SignupPage()),
                         );
                       },
-                      child: const Text(
-                        'Create a New Account Now (If Already Not Registered.)',
-                        style: TextStyle(fontSize: 18, color: Colors.red),
+                      child: const Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Create a New Account Now',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.red,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            '(If already exists)',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
 

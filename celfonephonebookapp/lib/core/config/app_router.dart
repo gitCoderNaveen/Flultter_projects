@@ -27,6 +27,7 @@ import 'package:celfonephonebookapp/features/partner/features/media_partner/ui/m
 import 'package:celfonephonebookapp/features/partner/features/media_partner_guide.dart';
 import 'package:celfonephonebookapp/features/partner/ui/partner_page.dart';
 import 'package:celfonephonebookapp/features/profile/ui/dash_board.dart';
+import 'package:celfonephonebookapp/features/profile/ui/edit_profile_page.dart';
 import 'package:celfonephonebookapp/features/profile/ui/profile_page.dart';
 import 'package:celfonephonebookapp/features/profile/ui/profile_screen.dart';
 import 'package:celfonephonebookapp/features/promotions/features/categorywisepromotions/ui/categorywise_pro_page.dart';
@@ -142,7 +143,7 @@ class AppRouter {
           GoRoute(
             path: '/profile',
             pageBuilder: (context, state) =>
-                AppRouter._slidePage(const ProfileScreen()),
+                AppRouter._slidePage(const EditProfilePage()),
           ),
           GoRoute(
             path: '/dashboard',

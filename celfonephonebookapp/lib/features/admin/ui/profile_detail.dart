@@ -32,6 +32,7 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
       'role',
       'views',
       'business_address',
+      'display_name',
     ];
     return forbidden.contains(key.toLowerCase());
   }

@@ -29,6 +29,7 @@ class LeadService {
       final shopName = item['business_name']?.toString().isNotEmpty == true
           ? item['business_name']
           : item['person_name'];
+      final application = "DOWNLOAD CELFONBOOK APP FROM PLAYSTORE";
 
       final cus_number = item['mobile_number'];
 
@@ -46,7 +47,7 @@ class LeadService {
       if (verified) {
         final response = await http.post(
           Uri.parse(
-            "http://bhashsms.com/api/sendmsg.php?user=Celfon_SMS&pass=123456&sender=CELFON&phone=$cus_number&text=Thanks for Regstering with Signpost Celfon5g+. Your login credintials are Username: $shopName, Password: $cus_number. Please login to your profile and edit if needed. Regards, Signpost Celfon Team&priority=ndnd&stype=normal",
+            "http://bhashsms.com/api/sendmsg.php?user=Celfon_SMS&pass=123456&sender=CELFON&phone=$cus_number&text=New Lead From CELFON BOOK App. We have a new lead from $viewerName needing products related to your activity. To view Contact details of the Lead, Please login here $application for support, Contact +91 97868 89092.&priority=ndnd&stype=normal",
           ),
           body: {"shop_id": shopId, "shop_name": shopName},
         );
