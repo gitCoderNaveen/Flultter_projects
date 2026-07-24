@@ -1,11 +1,14 @@
+import 'package:celfonephonebookapp/theme/app_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 import 'core/config/app_router.dart';
 import 'core/services/supabase_service.dart';
-import 'core/config/app_theme.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   await SupabaseService.initialize();
   runApp(const MyApp());
 }
@@ -18,7 +21,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'Celfon5G+ Phone Book',
-      theme: AppTheme.theme(const Color(0xFF1F8EB6)),
+      theme: AppTheme.light,
       routerConfig: AppRouter.router,
     );
   }

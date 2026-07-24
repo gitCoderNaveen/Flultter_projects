@@ -33,6 +33,7 @@ import 'package:celfonephonebookapp/features/profile/ui/profile_screen.dart';
 import 'package:celfonephonebookapp/features/promotions/features/categorywisepromotions/ui/categorywise_pro_page.dart';
 import 'package:celfonephonebookapp/features/promotions/features/nearbypromotions/ui/nearbypromotion_page.dart';
 import 'package:celfonephonebookapp/features/promotions/ui/promotion_page.dart';
+import 'package:celfonephonebookapp/features/refer/ui/refer_page.dart';
 import 'package:celfonephonebookapp/features/reverse_number_finder/view/reverse_number_finder_page.dart';
 import 'package:celfonephonebookapp/features/subscription/ui/subscription_dashboard.dart';
 import 'package:celfonephonebookapp/features/subscription/ui/subscription_page.dart';
@@ -260,6 +261,11 @@ class AppRouter {
             path: '/contact_us',
             pageBuilder: (context, state) =>
                 AppRouter._slidePage(ContactUsPage()),
+          ),
+          GoRoute(
+            path: '/referpage',
+            pageBuilder: (context, state) =>
+                AppRouter._slidePage(ReferPage()),
           ),
           GoRoute(
             path: '/opt_out',

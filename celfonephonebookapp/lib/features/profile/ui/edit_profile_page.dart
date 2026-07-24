@@ -1,6 +1,5 @@
 import 'package:celfonephonebookapp/features/profile/widget/business_form.dart';
 import 'package:celfonephonebookapp/features/profile/widget/individual_form.dart';
-import 'package:celfonephonebookapp/features/profile/widget/product_image_picker.dart';
 import 'package:celfonephonebookapp/features/profile/widget/profile_image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';

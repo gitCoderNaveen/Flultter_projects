@@ -5,13 +5,25 @@ import 'package:celfonephonebookapp/features/home/model/directory_model.dart';
 import 'package:celfonephonebookapp/features/home/model/expo_diary_section.dart';
 import 'package:celfonephonebookapp/features/home/model/home_category_section.dart';
 import 'package:celfonephonebookapp/features/home/model/play_book_model.dart';
+import 'package:celfonephonebookapp/features/home/ui/premium_carousel.dart';
+import 'package:celfonephonebookapp/features/home/ui/premium_home_header.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../controller/home_controller.dart';
 import '../service/home_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import 'dart:async';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+import '../../../theme/app_colors.dart';
+import '../../../theme/app_shadows.dart';
+import '../../../theme/app_radius.dart';
+import '../../../theme/app_spacing.dart';
+import './refer_earn.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -25,8 +37,28 @@ class HomePage extends StatelessWidget {
   }
 }
 
-class _HomeView extends StatelessWidget {
+class _HomeView extends StatefulWidget {
   const _HomeView();
+
+  @override
+  State<_HomeView> createState() => _HomeViewState();
+}
+
+class _HomeViewState extends State<_HomeView> {
+  @override
+  void initState() {
+    super.initState();
+
+    Future.delayed(const Duration(seconds: 5), () {
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        barrierDismissible: true,
+        builder: (_) => const ReferEarnDialog(),
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,9 +68,9 @@ class _HomeView extends StatelessWidget {
       backgroundColor: Colors.grey.shade100,
       body: CustomScrollView(
         slivers: [
-          _AnimatedHeader(),
+          const PremiumHomeHeader(),
           SliverToBoxAdapter(child: _Greeting()),
-          SliverToBoxAdapter(child: _Carousel(c)),
+          SliverToBoxAdapter(child: PremiumCarousel(controller: c)),
           SliverToBoxAdapter(child: _IndexFinder()),
           SliverToBoxAdapter(
             child: HomeCategoriesSection(title: 'POPULAR CATEGORIES B2C'),
@@ -51,165 +83,6 @@ class _HomeView extends StatelessWidget {
           SliverToBoxAdapter(child: _PopularFirms()),
           SliverToBoxAdapter(child: PlayBooksSection()),
         ],
-      ),
-    );
-  }
-}
-
-class _AnimatedHeader extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return SliverAppBar(
-      pinned: true,
-      expandedHeight: 145,
-      collapsedHeight: 80,
-      elevation: 0,
-      backgroundColor: Colors.transparent,
-      flexibleSpace: LayoutBuilder(
-        builder: (context, constraints) {
-          final top = constraints.biggest.height;
-          final bool collapsed = top <= 100;
-
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            padding: const EdgeInsets.only(top: 40),
-            decoration: BoxDecoration(
-              color: collapsed ? Colors.white : const Color(0xFF1F8EB6),
-              borderRadius: const BorderRadius.vertical(
-                bottom: Radius.circular(28),
-              ),
-            ),
-            child: Column(
-              children: [
-                _HeaderRow(collapsed: collapsed),
-                const SizedBox(height: 12),
-                const _StickySearchBar(),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _HeaderRow extends StatelessWidget {
-  final bool collapsed;
-  const _HeaderRow({required this.collapsed});
-
-  @override
-  Widget build(BuildContext context) {
-    final color = collapsed ? Colors.black : Colors.white;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          Expanded(
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 4,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: RichText(
-                      text: const TextSpan(
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        children: [
-                          TextSpan(
-                            text: "Cel",
-                            style: TextStyle(color: Colors.red),
-                          ),
-                          TextSpan(
-                            text: "fon",
-                            style: TextStyle(color: Colors.blue),
-                          ),
-                          TextSpan(
-                            text: " Book",
-                            style: TextStyle(color: Colors.black),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 2),
-
-                  const Text(
-                    "Connects For Growth",
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Icon(Icons.notifications_none, color: color),
-        ],
-      ),
-    );
-  }
-}
-
-class _StickySearchBar extends StatelessWidget {
-  const _StickySearchBar();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(30),
-        onTap: () {
-          context.push('/search');
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          height: 52,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(30),
-            boxShadow: const [
-              BoxShadow(
-                blurRadius: 8,
-                color: Colors.black12,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            children: const [
-              Icon(Icons.search, color: Colors.black),
-              SizedBox(width: 12),
-              Text(
-                'Search people or businesses',
-                style: TextStyle(color: Colors.black54),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -642,7 +515,7 @@ class _PopularFirms extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                  color: Color.fromARGB(255, 2, 2, 248),
+                        color: Color.fromARGB(255, 2, 2, 248),
                       ),
                     ),
                   ],

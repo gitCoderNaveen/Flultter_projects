@@ -187,6 +187,15 @@ class MenuPage extends StatelessWidget {
                             onTap: () => context.push('/profile'),
                           ),
 
+                        if (user != null)
+                          buildMenuCard(
+                            icon: Icons.person_add_alt_1_rounded,
+                            iconColor: Colors.green,
+                            title: "My Referrals",
+                            subtitle: "View and manage your referrals",
+                            onTap: () => context.push('/referpage'),
+                          ),
+
                         user == null
                             ? buildMenuCard(
                                 icon: Icons.login,

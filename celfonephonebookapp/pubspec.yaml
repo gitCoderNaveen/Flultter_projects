@@ -42,7 +42,13 @@ dependencies:
   provider: ^6.1.5+1
   confetti: ^0.7.0
   http: ^1.2.0
+  flex_color_scheme: ^8.3.0
+  flutter_animate: ^4.5.2
   cached_network_image: ^3.4.1
+  skeletonizer: ^2.1.0
+  glassmorphism_ui: ^0.3.0
+  flutter_contacts: ^1.1.9
+  permission_handler: ^12.0.0
 
 
 

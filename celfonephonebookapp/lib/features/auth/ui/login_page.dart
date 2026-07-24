@@ -1,4 +1,5 @@
 import 'package:celfonephonebookapp/core/services/auth_service.dart';
+import 'package:celfonephonebookapp/core/services/firebase_notification_service.dart';
 import 'package:celfonephonebookapp/features/auth/ui/signup_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -79,6 +80,7 @@ class _LoginPageState extends State<LoginPage> {
           .maybeSingle();
 
       if (!mounted) return;
+      await FirebaseNotificationService().initialize();
       context.go('/home');
       setState(() {
         _isLionsMember = response != null;
